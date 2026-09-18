@@ -7,7 +7,7 @@ const banner = `// ==UserScript==
 // @name         [BIT AutoLogin] 一键登录北理工统一身份认证
 // @namespace    https://bit.edu.cn/
 // @version      ${version}
-// @description  适配 SourceID：直接提交 CAS 接口，保留一键登录与设置，遇到额外验证交回原站。
+// @description  自动登录所有需要北理工统一身份认证的网站！
 // @author       windlandneko
 // @homepageURL  https://github.com/windlandneko/bit-autologin
 // @supportURL   https://github.com/windlandneko/bit-autologin/issues
@@ -23,13 +23,15 @@ const banner = `// ==UserScript==
 
 export default defineConfig({
   build: {
-    lib: {
-      entry: 'src/main.js',
-      name: 'BITAutoLogin',
-      formats: ['iife'],
-      fileName: () => 'bit-autologin.user.js',
-    },
     minify: false,
-    rolldownOptions: { output: { banner } },
+    rolldownOptions: {
+      input: 'src/main.js',
+      preserveEntrySignatures: false,
+      output: {
+        format: 'iife',
+        entryFileNames: 'bit-autologin.user.js',
+        banner,
+      },
+    },
   },
 })

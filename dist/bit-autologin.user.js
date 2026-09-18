@@ -2,7 +2,7 @@
 // @name         [BIT AutoLogin] 一键登录北理工统一身份认证
 // @namespace    https://bit.edu.cn/
 // @version      2.0.0
-// @description  适配 SourceID：直接提交 CAS 接口，保留一键登录与设置，遇到额外验证交回原站。
+// @description  自动登录所有需要北理工统一身份认证的网站！
 // @author       windlandneko
 // @homepageURL  https://github.com/windlandneko/bit-autologin
 // @supportURL   https://github.com/windlandneko/bit-autologin/issues
@@ -15,8 +15,7 @@
 // @noframes
 // @license      MIT
 // ==/UserScript==
-var BITAutoLogin = (function(exports) {
-	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+(function() {
 	//#region src/ui.js
 	var STORAGE_KEY = "bit-autologin-settings";
 	var store = {
@@ -27,48 +26,58 @@ var BITAutoLogin = (function(exports) {
 		}),
 		set: (config) => GM_setValue(STORAGE_KEY, config)
 	};
+	var SPINNER = `<svg class="sso-spinner" viewBox="0 0 1024 1024" aria-hidden="true">
+  <path d="M512 36a476 476 0 0 1 476 476" fill="none" stroke="currentColor" stroke-width="72" stroke-linecap="round"/>
+</svg>`;
 	var STYLES = `
-  :host { font: 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #333; }
-  * { box-sizing: border-box; }
-  button, input { font: inherit; }
-  button { cursor: pointer; }
-  button:focus-visible, input:focus-visible { outline: 2px solid #2196f3; outline-offset: 3px; }
-  #sso-tip { display: flex; width: 100%; gap: 10px; margin-bottom: 24px; }
-  .sso-info, .sso-settings { min-height: 36px; padding: 8px 15px; border-radius: 4px;
-    background: #fff; border: 1px solid #ddd; display: flex; align-items: center;
-    justify-content: center; color: #000; transition: background .2s; }
+  @keyframes sso-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes sso-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes sso-fade-out { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes sso-scale-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+  @keyframes sso-scale-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.9); } }
+
+  #sso-tip { display: flex; width: 100%; gap: 10px; margin-bottom: 32px;
+    font: 14px sans-serif; user-select: none; }
+  .sso-info, .sso-settings { height: 36px; padding: 0 15px; border-radius: 4px;
+    background: #fff; border: 1px solid #fff; display: flex; align-items: center;
+    justify-content: center; color: #000; transition: background 0.2s ease; }
   .sso-info { flex: 1; gap: 8px; }
-  .sso-info:hover, .sso-settings:hover { background: #f5f5f5; }
-  .sso-info.error { background: #fff1f0; border-color: #ffa39e; color: #a8071a; }
-  .sso-info:disabled { cursor: default; }
-  .sso-info.disabled { opacity: .65; }
-  .sso-spinner { width: 14px; height: 14px; border: 2px solid #ddd; border-top-color: #2196f3;
-    border-radius: 50%; animation: sso-spin 1s linear infinite; flex-shrink: 0; }
-  .sso-cancel { margin-left: auto; font-size: 12px; opacity: .7; white-space: nowrap; }
-  .sso-overlay { position: fixed; inset: 0; background: #0005; z-index: 2147483647;
-    display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .sso-info.clickable, .sso-settings { cursor: pointer; }
+  .sso-info.clickable:hover, .sso-settings:hover { background: rgba(255,255,255,0.9); }
+  .sso-info.success { --status-color: rgba(76,175,80,0.9); }
+  .sso-info.error { --status-color: rgba(255,77,79,0.9); }
+  .sso-info.success, .sso-info.error { background: var(--status-color); border-color: var(--status-color); color: #fff; }
+  .sso-info.disabled { opacity: 0.5; cursor: not-allowed; }
+  .sso-spinner { width: 14px; height: 14px; animation: sso-spin 1s linear infinite; }
+  .sso-info:not(.loading) :is(.sso-spinner, .sso-cancel) { display: none; }
+  .sso-cancel { margin-left: auto; opacity: 0.7; font-size: 12px; }
+
+  .sso-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 999999;
+    display: flex; align-items: center; justify-content: center; animation: sso-fade-in 0.2s ease; }
+  .sso-overlay.closing { animation: sso-fade-out 0.15s ease forwards; }
   .sso-dialog { background: #fff; padding: 32px 32px 18px; border-radius: 12px;
-    box-shadow: 0 10px 40px #0005; width: 400px; max-width: 100%; max-height: 90vh;
-    overflow: auto; animation: sso-scale-in .2s ease; position: relative; }
-  .sso-title { margin: 0 28px 20px 0; font-size: 20px; }
-  .sso-close { position: absolute; top: 14px; right: 14px; border: none; background: none;
-    font-size: 24px; line-height: 1; color: #666; padding: 4px; }
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3); width: 400px; max-width: 90vw; user-select: none;
+    animation: sso-scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .sso-overlay.closing .sso-dialog { animation: sso-scale-out 0.15s ease forwards; }
+  .sso-title { margin: 0 0 20px; color: #333; font-size: 20px; }
   .sso-field { margin-bottom: 15px; }
-  .sso-label { display: block; margin-bottom: 5px; color: #666; }
-  .sso-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-  .sso-hint { color: #777; font-size: 12px; display: block; margin-top: 6px; line-height: 1.5; }
-  .sso-checkbox-label { display: flex; align-items: center; cursor: pointer; margin: 18px 0; gap: 8px; }
-  .sso-checkbox { width: 16px; height: 16px; }
+  .sso-label { display: block; margin-bottom: 5px; color: #666; font-size: 14px; }
+  .sso-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
+    box-sizing: border-box; font-size: 14px; }
+  .sso-hint, .sso-footnote { color: #999; font-size: 12px; }
+  .sso-checkbox-label { display: flex; align-items: center; cursor: pointer; margin-bottom: 20px; }
+  .sso-checkbox { margin-right: 8px; width: 16px; height: 16px; }
+  .sso-checkbox-text { color: #666; font-size: 14px; }
   .sso-actions { display: flex; gap: 10px; justify-content: space-between; }
-  .sso-btn { padding: 7px 18px; border-radius: 6px; }
-  .sso-btn-clear { border: 1px solid #ff000033; background: white; color: #c00; }
-  .sso-btn-primary { border: none; background: #2196f3; color: white; }
-  .sso-btn-primary:hover { background: #1976d2; }
-  .sso-footnote { margin-top: 16px; text-align: center; font-size: 12px; color: #777; line-height: 1.5; }
-  .sso-validation { color: #a8071a; font-size: 12px; min-height: 18px; margin-bottom: 10px; }
-  @keyframes sso-spin { to { transform: rotate(360deg); } }
-  @keyframes sso-scale-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  .sso-btn { padding: 6px 18px; border-radius: 6px; cursor: pointer; font-size: 14px;
+    transition: background 0.2s ease; }
+  .sso-btn-clear { border: 1px solid #ff000033; background: #fff; color: #ff0000; }
+  .sso-btn-clear:hover { background: #ff00000a; }
+  .sso-btn-clear:active { background: #ff000018; }
+  .sso-btn-primary { border: none; background: #2196F3; color: #fff; }
+  .sso-btn-primary:hover { background: #1976D2; }
+  .sso-btn-primary:active { background: #1565C0; }
+  .sso-footnote { margin-top: 16px; text-align: center; line-height: 1.4; }
 `;
 	function createUI(onLogin, onCancel) {
 		const host = document.createElement("div");
@@ -79,42 +88,36 @@ var BITAutoLogin = (function(exports) {
 		root.append(style);
 		const bar = document.createElement("div");
 		bar.id = "sso-tip";
-		bar.innerHTML = "<button type=\"button\" class=\"sso-info\" aria-live=\"polite\"></button><button type=\"button\" class=\"sso-settings\">设置</button>";
+		bar.innerHTML = `
+    <div class="sso-info" aria-live="polite">
+      ${SPINNER}<span class="sso-message"></span><span class="sso-cancel">点击取消</span>
+    </div>
+    <div class="sso-settings">设置</div>`;
 		root.append(bar);
 		const info = bar.querySelector(".sso-info");
+		const messageText = bar.querySelector(".sso-message");
 		let observer;
+		let tipTimer;
 		let dialogHost;
+		let closingLayer;
 		let restoreFocus;
 		let lastStatus = {
 			state: "",
 			message: ""
 		};
-		function show(state = "", message = "") {
+		function show(state = "", message = "", timeout) {
+			clearTimeout(tipTimer);
 			lastStatus = {
 				state,
 				message
 			};
 			const config = store.get();
-			info.replaceChildren();
-			info.className = `sso-info ${state}`;
-			info.disabled = state === "disabled";
-			const text = document.createElement("span");
-			text.textContent = message || (config.username && config.password ? "一键登录" : "请先设置登录信息 →");
-			info.append(text);
-			if (state === "loading") {
-				const spinner = document.createElement("span");
-				spinner.className = "sso-spinner";
-				const cancel = document.createElement("span");
-				cancel.className = "sso-cancel";
-				cancel.textContent = "点击取消";
-				info.prepend(spinner);
-				info.append(cancel);
-			}
-			info.onclick = () => {
-				if (state === "loading") onCancel();
-				else if (config.username && config.password) onLogin();
-				else openSettings();
-			};
+			const ready = config.username && config.password;
+			info.className = `sso-info ${state || (ready ? "clickable" : "disabled")}`;
+			info.classList.toggle("clickable", state === "loading" || !state && !!ready);
+			messageText.textContent = message || (ready ? "一键登录" : "请先设置登录信息→");
+			info.onclick = state === "loading" ? onCancel : !state && ready ? onLogin : null;
+			if (timeout) tipTimer = setTimeout(() => show(), timeout);
 		}
 		function placeBar() {
 			const panel = document.querySelector("#normalLoginForm, .moreloginbtnBox, .login-content-right-inner");
@@ -135,34 +138,37 @@ var BITAutoLogin = (function(exports) {
 				subtree: true
 			});
 		}
-		function closeSettings() {
-			dialogHost?.remove();
+		function closeSettings(animate = true) {
+			if (!dialogHost) return;
+			const closing = dialogHost;
+			if (animate) {
+				const layer = closingLayer;
+				layer.classList.add("closing");
+				layer.addEventListener("animationend", () => closing.remove(), { once: true });
+			} else closing.remove();
 			dialogHost = null;
 			restoreFocus?.focus();
 		}
 		function openSettings() {
-			closeSettings();
+			closeSettings(false);
 			restoreFocus = root.activeElement || document.activeElement;
 			dialogHost = document.createElement("div");
 			dialogHost.id = "gm-sso-config";
 			const dialogRoot = dialogHost.attachShadow({ mode: "closed" });
-			const dialogStyle = document.createElement("style");
-			dialogStyle.textContent = STYLES;
-			dialogRoot.append(dialogStyle);
+			dialogRoot.append(style.cloneNode(true));
 			const overlay = document.createElement("div");
 			overlay.className = "sso-overlay";
+			closingLayer = overlay;
 			overlay.innerHTML = `
       <form class="sso-dialog" role="dialog" aria-modal="true" aria-labelledby="sso-title">
-        <button type="button" class="sso-close" aria-label="关闭设置">×</button>
         <h2 class="sso-title" id="sso-title">🔐 BIT Autologin 设置</h2>
         <div class="sso-field"><label class="sso-label" for="gm-sso-username">用户名 (学号)</label>
-          <input type="text" id="gm-sso-username" class="sso-input" placeholder="请输入学号" autocomplete="username"></div>
+          <input type="text" id="gm-sso-username" name="username" class="sso-input" placeholder="请输入学号" autocomplete="username"></div>
         <div class="sso-field"><label class="sso-label" for="gm-sso-password">密码</label>
-          <input type="password" id="gm-sso-password" class="sso-input" placeholder="请输入密码" autocomplete="current-password">
-          <small class="sso-hint">凭证保存在油猴的本地存储中，未使用主密码加密。</small></div>
-        <label class="sso-checkbox-label"><input type="checkbox" id="gm-sso-auto" class="sso-checkbox">
-          <span>以后都自动登录</span></label>
-        <div class="sso-validation" role="alert"></div>
+          <input type="password" id="gm-sso-password" name="password" class="sso-input" placeholder="请输入密码" autocomplete="current-password">
+          <small class="sso-hint">密码存储在本地浏览器中</small></div>
+        <label class="sso-checkbox-label"><input type="checkbox" id="gm-sso-auto" name="auto" class="sso-checkbox">
+          <span class="sso-checkbox-text">以后都自动登录</span></label>
         <div class="sso-actions"><button type="button" id="gm-sso-clear" class="sso-btn sso-btn-clear">清除</button>
           <button type="submit" class="sso-btn sso-btn-primary">保存</button></div>
         <div class="sso-footnote">点击油猴图标也可以打开本设置<br>
@@ -170,16 +176,16 @@ var BITAutoLogin = (function(exports) {
       </form>`;
 			dialogRoot.append(overlay);
 			document.body.append(dialogHost);
-			const field = (selector) => overlay.querySelector(selector);
+			const form = overlay.querySelector("form");
+			const { username, password, auto } = form.elements;
 			const config = store.get();
-			field("#gm-sso-username").value = config.username;
-			field("#gm-sso-password").value = config.password;
-			field("#gm-sso-auto").checked = config.auto;
-			field(".sso-close").onclick = closeSettings;
+			username.value = config.username;
+			password.value = config.password;
+			auto.checked = config.auto;
 			overlay.onclick = (event) => {
 				if (event.target === overlay) closeSettings();
 			};
-			field("#gm-sso-clear").onclick = () => {
+			form.querySelector("#gm-sso-clear").onclick = () => {
 				onCancel();
 				store.set({
 					username: "",
@@ -187,23 +193,19 @@ var BITAutoLogin = (function(exports) {
 					auto: false
 				});
 				closeSettings();
-				show();
+				show("error", "登录信息已清除", 1e3);
 			};
-			field("form").onsubmit = (event) => {
+			form.onsubmit = (event) => {
 				event.preventDefault();
 				const next = {
-					username: field("#gm-sso-username").value.trim(),
-					password: field("#gm-sso-password").value,
-					auto: field("#gm-sso-auto").checked
+					username: username.value.trim(),
+					password: password.value,
+					auto: auto.checked
 				};
-				if (!next.username || !next.password) {
-					field(".sso-validation").textContent = "请填写用户名和密码，或使用“清除”移除配置。";
-					return;
-				}
 				onCancel();
 				store.set(next);
 				closeSettings();
-				show();
+				show("success", "登录信息已保存", 1e3);
 			};
 			overlay.onkeydown = (event) => {
 				if (event.key === "Escape") {
@@ -222,7 +224,7 @@ var BITAutoLogin = (function(exports) {
 					first.focus();
 				}
 			};
-			field("#gm-sso-username").focus();
+			username.focus();
 			return dialogRoot;
 		}
 		bar.querySelector(".sso-settings").onclick = openSettings;
@@ -236,7 +238,8 @@ var BITAutoLogin = (function(exports) {
 			},
 			destroy() {
 				observer?.disconnect();
-				closeSettings();
+				clearTimeout(tipTimer);
+				closeSettings(false);
 				host.remove();
 			}
 		};
@@ -278,13 +281,13 @@ var BITAutoLogin = (function(exports) {
 	}
 	function pageBlockReason(state) {
 		if (state.second && state.second !== "false") return "请先在原页面完成二次验证";
-		if (state.type && state.type !== "UsernamePassword") return "当前是其他认证方式，请使用原页面完成验证";
-		if (state.rule && state.rule !== "normal") return "当前认证流程需要在原页面继续";
+		if (state.type && state.type !== "UsernamePassword") return "当前是其他认证方式，请在原页面完成验证";
+		if (state.rule && state.rule !== "normal") return "请在原页面完成验证";
 		if (state.error) return `服务端返回认证提示（${state.error}），请在原页面处理后重试`;
 		if (state.captchaUrl || state.captchaInvisible === "true") return "当前需要验证码，请在原页面完成验证";
 		if (state.captchaVendor && state.captchaVendor !== "system") return "当前需要交互式验证，请在原页面完成";
-		if (!state.key || !state.execution) return "未找到当前认证参数，请刷新认证页面";
-		if (state.riskEngine !== "USTC") return "认证风险模块已变化，请使用原页面登录";
+		if (!state.key || !state.execution) return "未找到当前认证参数，请刷新页面";
+		if (state.riskEngine !== "USTC") return "认证风险模块已变化，请在原页面登录";
 		return "";
 	}
 	async function encryptField(base64Key, plaintext) {
@@ -359,7 +362,7 @@ var BITAutoLogin = (function(exports) {
 		});
 		if (!response.ok) throw new Error(`风险认证接口返回 HTTP ${response.status}`);
 		const data = await response.json();
-		if (typeof data.responsetoken !== "string" || !data.responsetoken) throw new Error("未取得风险认证令牌，请使用原页面继续验证");
+		if (typeof data.responsetoken !== "string" || !data.responsetoken) throw new Error("未取得风险认证令牌，请在原页面完成验证");
 		return data.responsetoken;
 	}
 	async function buildPayload(state, { username, password }, risk) {
@@ -406,18 +409,14 @@ var BITAutoLogin = (function(exports) {
 	}
 	//#endregion
 	//#region src/main.js
-	var ATTEMPT_KEY = "bit-sso-attempt-v2";
-	var COOLDOWN = 6e5;
 	function startApp(pageWindow) {
 		const route = loginRoute(location.href);
 		let controller = null;
 		let submitted = false;
-		const markAttempt = () => sessionStorage.setItem(ATTEMPT_KEY, Date.now());
 		function cancel() {
 			controller?.abort();
 			controller = null;
-			markAttempt();
-			ui.show("", "已取消，点击重新登录");
+			ui.show("success", "已取消一键登录", 1500);
 		}
 		async function login() {
 			if (!route || controller || submitted) return;
@@ -439,13 +438,12 @@ var BITAutoLogin = (function(exports) {
 				signal.throwIfAborted();
 				const current = readPageState(document);
 				if (current.execution !== state.execution || pageBlockReason(current)) throw new Error("认证页面已变化，请检查当前验证步骤后重试");
-				markAttempt();
 				ui.show("disabled", "正在跳转…");
 				submitPayload(document, route, payload);
 				submitted = true;
 			} catch (error) {
 				if (controller !== active) return;
-				ui.show("error", signal.reason?.name === "TimeoutError" ? "请求超时，请手动重试" : error.message);
+				ui.show("error", signal.reason?.name === "TimeoutError" ? "请求超时，请手动重试" : error.message, 2500);
 			} finally {
 				if (controller === active) controller = null;
 			}
@@ -456,7 +454,6 @@ var BITAutoLogin = (function(exports) {
 			ui.mount();
 			const reason = pageBlockReason(readPageState(document));
 			if (reason) ui.show("error", reason);
-			else if (Date.now() - Number(sessionStorage.getItem(ATTEMPT_KEY) || 0) < COOLDOWN) ui.show("", "已暂停自动重试；需要时点击登录");
 			else if (store.get().auto) login();
 		}
 		return {
@@ -475,6 +472,4 @@ var BITAutoLogin = (function(exports) {
 		window.addEventListener("pagehide", () => app.destroy(), { once: true });
 	}
 	//#endregion
-	exports.startApp = startApp;
-	return exports;
-})({});
+})();

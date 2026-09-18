@@ -32,15 +32,15 @@ export function readPageState(document) {
 export function pageBlockReason(state) {
   if (state.second && state.second !== 'false') return '请先在原页面完成二次验证'
   if (state.type && state.type !== 'UsernamePassword')
-    return '当前是其他认证方式，请使用原页面完成验证'
-  if (state.rule && state.rule !== 'normal') return '当前认证流程需要在原页面继续'
+    return '当前是其他认证方式，请在原页面完成验证'
+  if (state.rule && state.rule !== 'normal') return '请在原页面完成验证'
   if (state.error) return `服务端返回认证提示（${state.error}），请在原页面处理后重试`
   if (state.captchaUrl || state.captchaInvisible === 'true')
     return '当前需要验证码，请在原页面完成验证'
   if (state.captchaVendor && state.captchaVendor !== 'system')
     return '当前需要交互式验证，请在原页面完成'
-  if (!state.key || !state.execution) return '未找到当前认证参数，请刷新认证页面'
-  if (state.riskEngine !== 'USTC') return '认证风险模块已变化，请使用原页面登录'
+  if (!state.key || !state.execution) return '未找到当前认证参数，请刷新页面'
+  if (state.riskEngine !== 'USTC') return '认证风险模块已变化，请在原页面登录'
   return ''
 }
 
@@ -130,7 +130,7 @@ export async function requestRiskToken(route, fingerprint, signal) {
   if (!response.ok) throw new Error(`风险认证接口返回 HTTP ${response.status}`)
   const data = await response.json()
   if (typeof data.responsetoken !== 'string' || !data.responsetoken) {
-    throw new Error('未取得风险认证令牌，请使用原页面继续验证')
+    throw new Error('未取得风险认证令牌，请在原页面完成验证')
   }
   return data.responsetoken
 }
@@ -171,8 +171,7 @@ export function submitPayload(document, route, payload) {
     form.append(input)
   }
   document.body.append(form)
-  // A direct HTTP form navigation, not interaction with the site's controls.
-  // The browser owns redirects, HttpOnly cookies and any MFA response page.
+
   try {
     document.defaultView.HTMLFormElement.prototype.submit.call(form)
   } catch (error) {

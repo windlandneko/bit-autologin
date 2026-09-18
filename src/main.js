@@ -9,20 +9,15 @@ import {
   encodeVpnHost,
 } from './protocol.js'
 
-const ATTEMPT_KEY = 'bit-sso-attempt-v2'
-const COOLDOWN = 10 * 60 * 1000
-
 export function startApp(pageWindow) {
   const route = loginRoute(location.href)
   let controller = null
   let submitted = false
-  const markAttempt = () => sessionStorage.setItem(ATTEMPT_KEY, Date.now())
 
   function cancel() {
     controller?.abort()
     controller = null
-    markAttempt()
-    ui.show('', '已取消，点击重新登录')
+    ui.show('success', '已取消一键登录', 1500)
   }
 
   async function login() {
@@ -52,7 +47,6 @@ export function startApp(pageWindow) {
       const current = readPageState(document)
       if (current.execution !== state.execution || pageBlockReason(current))
         throw new Error('认证页面已变化，请检查当前验证步骤后重试')
-      markAttempt()
       ui.show('disabled', '正在跳转…')
       submitPayload(document, route, payload)
       submitted = true
@@ -61,6 +55,7 @@ export function startApp(pageWindow) {
       ui.show(
         'error',
         signal.reason?.name === 'TimeoutError' ? '请求超时，请手动重试' : error.message,
+        2500,
       )
     } finally {
       if (controller === active) controller = null
@@ -73,8 +68,6 @@ export function startApp(pageWindow) {
     ui.mount()
     const reason = pageBlockReason(readPageState(document))
     if (reason) ui.show('error', reason)
-    else if (Date.now() - Number(sessionStorage.getItem(ATTEMPT_KEY) || 0) < COOLDOWN)
-      ui.show('', '已暂停自动重试；需要时点击登录')
     else if (store.get().auto) void login()
   }
   return {
@@ -89,7 +82,6 @@ export function startApp(pageWindow) {
   }
 }
 
-// Keep initialization separate from the exported flow so tests can import it.
 if (typeof window !== 'undefined') {
   const app = startApp(unsafeWindow)
   window.addEventListener('pagehide', () => app.destroy(), { once: true })

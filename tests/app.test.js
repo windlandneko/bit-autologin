@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom'
 import { startApp } from '../src/main.js'
 import { store } from '../src/ui.js'
 
-function harness({ auto = false, second = '', fetchImpl, recent = false } = {}) {
+function harness({ auto = false, second = '', fetchImpl } = {}) {
   const dom = new JSDOM(
     `<body><div hidden>
     <p id="login-croypto">${Buffer.alloc(16, 7).toString('base64')}</p>
@@ -14,7 +14,6 @@ function harness({ auto = false, second = '', fetchImpl, recent = false } = {}) 
     </div><form id="normalLoginForm"></form></body>`,
     { url: 'https://sso.bit.edu.cn/cas/login' },
   )
-  if (recent) dom.window.sessionStorage.setItem('bit-sso-attempt-v2', String(Date.now()))
   let stored = { username: 'student', password: 'secret', auto }
   const submissions = []
   let requests = 0
@@ -22,7 +21,6 @@ function harness({ auto = false, second = '', fetchImpl, recent = false } = {}) 
     'MutationObserver',
     'document',
     'location',
-    'sessionStorage',
     'GM_getValue',
     'GM_setValue',
     'GM_registerMenuCommand',
@@ -35,7 +33,6 @@ function harness({ auto = false, second = '', fetchImpl, recent = false } = {}) 
     MutationObserver: dom.window.MutationObserver,
     document: dom.window.document,
     location: dom.window.location,
-    sessionStorage: dom.window.sessionStorage,
     GM_getValue: () => stored,
     GM_setValue: (_, value) => {
       stored = value
@@ -74,7 +71,6 @@ test('bare SSO entry supports one direct login, duplicate clicks cannot submit t
   await Promise.all([h.app.login(), h.app.login()])
   assert.equal(h.requests(), 1)
   assert.equal(h.submissions.length, 1)
-  assert.ok(h.dom.window.sessionStorage.getItem('bit-sso-attempt-v2'))
   h.close()
 })
 
@@ -141,16 +137,8 @@ test('UI survives Angular replacing the form; settings dialog supports Escape', 
   root
     .querySelector('.sso-overlay')
     .dispatchEvent(new h.dom.window.KeyboardEvent('keydown', { key: 'Escape' }))
+  root.querySelector('.sso-overlay').dispatchEvent(new h.dom.window.Event('animationend'))
   assert.equal(h.dom.window.document.getElementById('gm-sso-config'), null)
-  h.close()
-})
-
-test('recent attempt pauses automatic reload loops but permits an explicit login', async () => {
-  const h = harness({ auto: true, recent: true })
-  assert.equal(h.requests(), 0)
-  assert.match(h.app.ui.status.message, /暂停自动重试/)
-  await h.app.login()
-  assert.equal(h.submissions.length, 1)
   h.close()
 })
 
