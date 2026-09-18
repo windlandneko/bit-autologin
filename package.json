@@ -1,0 +1,26 @@
+{
+  "name": "bit-sso-autologin",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "test": "node --test tests/*.test.js",
+    "lint": "oxlint --deny-warnings src tests vite.config.js",
+    "format": "oxfmt src tests vite.config.js",
+    "check": "pnpm lint && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.0",
+    "oxfmt": "^0.68.0",
+    "oxlint": "^1.83.0",
+    "vite": "^8.3.0"
+  },
+  "description": "北理工统一身份认证一键登录用户脚本",
+  "license": "MIT",
+  "author": "windlandneko",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/windlandneko/bit-autologin.git"
+  }
+}
