@@ -14,6 +14,11 @@ function harness({ auto = false, second = '', fetchImpl } = {}) {
     </div><form id="normalLoginForm"></form></body>`,
     { url: 'https://sso.bit.edu.cn/cas/login' },
   )
+  dom.window.matchMedia = () => ({
+    matches: false,
+    addEventListener() {},
+    removeEventListener() {},
+  })
   let stored = { username: 'student', password: 'secret', auto }
   const submissions = []
   let requests = 0
@@ -33,9 +38,9 @@ function harness({ auto = false, second = '', fetchImpl } = {}) {
     MutationObserver: dom.window.MutationObserver,
     document: dom.window.document,
     location: dom.window.location,
-    GM_getValue: () => stored,
-    GM_setValue: (_, value) => {
-      stored = value
+    GM_getValue: (key, fallback) => (key === 'bit-autologin-settings' ? stored : fallback),
+    GM_setValue: (key, value) => {
+      if (key === 'bit-autologin-settings') stored = value
     },
     GM_registerMenuCommand() {},
     fetch: async (...args) => {
@@ -124,7 +129,10 @@ test('settings preserve credentials containing markup as values; clear removes s
   assert.equal(h.dom.window.document.querySelector('script'), null)
   const reopened = h.app.ui.openSettings()
   reopened.querySelector('#gm-sso-clear').click()
-  assert.deepEqual(store.get(), { username: '', password: '', auto: false })
+  assert.equal(store.get().username, '<student>')
+  assert.equal(reopened.querySelector('#gm-sso-clear').textContent, '确认清除？')
+  reopened.querySelector('#gm-sso-clear').click()
+  assert.deepEqual(store.get(), { username: '', password: '', auto: false, optimizedUI: false })
   h.close()
 })
 
@@ -132,7 +140,12 @@ test('UI survives Angular replacing the form; settings dialog supports Escape', 
   const h = harness()
   h.dom.window.document.getElementById('normalLoginForm').remove()
   await new Promise((done) => setImmediate(done))
-  assert.ok(h.dom.window.document.getElementById('bit-sso-helper'))
+  assert.equal(h.dom.window.document.getElementById('bit-sso-helper'), null)
+  const form = h.dom.window.document.createElement('form')
+  form.id = 'normalLoginForm'
+  h.dom.window.document.body.append(form)
+  await new Promise((done) => setImmediate(done))
+  assert.ok(form.querySelector('#bit-sso-helper'))
   const root = h.app.ui.openSettings()
   root
     .querySelector('.sso-overlay')
@@ -159,4 +172,143 @@ test('combined timeout prevents submission and allows a manual retry', async (t)
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ responsetoken: 'retry' }) })
   await h.app.login()
   assert.equal(h.submissions.length, 1)
+})
+
+test('optimized UI can be toggled without replacing the authentication form', () => {
+  const h = harness()
+  const form = document.querySelector('#normalLoginForm')
+  store.set({ ...store.get(), optimizedUI: true })
+  assert.ok(document.documentElement.classList.contains('bit-optimized-ui'))
+  assert.ok(document.querySelector('#bit-optimized-ui'))
+  store.set({ ...store.get(), optimizedUI: false })
+  assert.equal(document.querySelector('#bit-optimized-ui'), null)
+  assert.equal(document.documentElement.classList.contains('bit-optimized-ui'), false)
+  assert.equal(document.querySelector('#normalLoginForm'), form)
+  assert.equal(h.requests(), 0)
+  h.close()
+})
+
+test('optimized UI does not style other campus pages', () => {
+  const h = harness()
+  h.dom.reconfigure({ url: 'https://lexue.bit.edu.cn/' })
+  store.set({ ...store.get(), optimizedUI: true })
+  assert.equal(document.querySelector('#bit-optimized-ui'), null)
+  assert.equal(document.documentElement.classList.contains('bit-optimized-ui'), false)
+  h.close()
+})
+
+test('theme override persists for the session and disabling restores the logo', () => {
+  const h = harness()
+  const container = document.createElement('div')
+  container.innerHTML =
+    '<div class="login-title"><img class="login-title-img"></div><div class="login-content"><div id="login-content-right-inner"><div class="wrap-normal-title"></div></div></div>'
+  document.body.append(container)
+  const logo = container.querySelector('img')
+  const originalParent = logo.parentNode
+  store.set({ ...store.get(), optimizedUI: true })
+  assert.equal(logo.parentNode.className, 'bit-brand-emblem')
+  const button = document.querySelector('.bit-theme-button')
+  assert.equal(document.documentElement.dataset.bitTheme, 'light')
+  assert.equal(h.dom.window.sessionStorage.getItem('bit-autologin-theme'), null)
+  const icon = button.innerHTML
+  button.click()
+  assert.equal(document.documentElement.dataset.bitTheme, 'dark')
+  assert.equal(h.dom.window.sessionStorage.getItem('bit-autologin-theme'), 'dark')
+  assert.equal(button.innerHTML, icon)
+  store.set({ ...store.get(), optimizedUI: false })
+  assert.equal(logo.parentNode, originalParent)
+  assert.equal(document.querySelector('.bit-theme-button'), null)
+  store.set({ ...store.get(), optimizedUI: true })
+  assert.equal(document.documentElement.dataset.bitTheme, 'dark')
+  h.close()
+})
+
+test('optimized settings reuse the card and close with Escape', () => {
+  const h = harness()
+  const card = document.createElement('div')
+  card.className = 'login-content'
+  card.innerHTML =
+    '<div id="login-content-right-inner"><div class="ant-tabs-content-holder"></div></div>'
+  document.body.append(card)
+  store.set({ ...store.get(), optimizedUI: true })
+  const root = h.app.ui.openSettings()
+  assert.equal(card.querySelector('#gm-sso-config').className, 'inline-settings')
+  assert.equal(root.querySelector('[name=username]').value, 'student')
+  assert.equal(root.activeElement, root.querySelector('form'))
+  const overlay = root.querySelector('.sso-overlay')
+  overlay.dispatchEvent(new h.dom.window.KeyboardEvent('keydown', { key: 'Escape' }))
+  overlay.dispatchEvent(new h.dom.window.Event('animationend'))
+  assert.equal(card.querySelector('#gm-sso-config'), null)
+  h.close()
+})
+
+test('cached tab helpers survive detachment and theme teardown restores exact positions', async () => {
+  const h = harness()
+  const card = document.createElement('div')
+  card.className = 'login-content'
+  card.innerHTML =
+    '<div id="login-content-right-inner"><div class="wrap-normal-title"><b>title</b><div class="topFunctionColor"></div><i>after</i></div><div class="ant-tabs-content-holder"><div class="ant-tabs-tabpane ant-tabs-tabpane-active"><form><div class="passkey-use"><a>如何创建通行密钥？</a></div></form></div></div></div>'
+  document.body.append(card)
+  const pane = card.querySelector('.ant-tabs-tabpane')
+  const holder = pane.parentNode
+  const form = pane.querySelector('form')
+  const help = pane.querySelector('.passkey-use')
+  const remember = card.querySelector('.topFunctionColor')
+  const next = remember.nextSibling
+  const parent = remember.parentNode
+  store.set({ ...store.get(), optimizedUI: true })
+  pane.remove()
+  await new Promise((done) => setImmediate(done))
+  assert.equal(help.hidden, true)
+  holder.append(pane)
+  await new Promise((done) => setImmediate(done))
+  assert.equal(help.isConnected, true)
+  assert.equal(help.hidden, false)
+  pane.classList.remove('ant-tabs-tabpane-active')
+  await new Promise((done) => setImmediate(done))
+  store.set({ ...store.get(), optimizedUI: false })
+  assert.equal(help.parentNode, form)
+  assert.equal(help.hidden, false)
+  assert.equal(remember.parentNode, parent)
+  assert.equal(remember.nextSibling, next)
+  h.close()
+})
+
+test('modern UI blocks only the native orientation reload event and restores it on disable', () => {
+  const h = harness()
+  let orientations = 0
+  let resizes = 0
+  document.addEventListener('pl_event', () => orientations++)
+  h.dom.window.addEventListener('resize', () => resizes++)
+  store.set({ ...store.get(), optimizedUI: true })
+  document.dispatchEvent(new h.dom.window.Event('pl_event'))
+  h.dom.window.dispatchEvent(new h.dom.window.Event('resize'))
+  assert.equal(orientations, 0)
+  assert.equal(resizes, 1)
+  store.set({ ...store.get(), optimizedUI: false })
+  document.dispatchEvent(new h.dom.window.Event('pl_event'))
+  assert.equal(orientations, 1)
+  h.close()
+})
+
+test('announcement stays collapsed during native initialization and settings closes it', () => {
+  const h = harness()
+  const container = document.createElement('div')
+  container.innerHTML =
+    '<div class="login-content"><div class="login-content-left"></div><button class="newNotice"></button><div id="login-content-right-inner"><div class="ant-tabs-content-holder"></div></div></div>'
+  document.body.append(container)
+  const card = container.firstElementChild
+  const notice = card.querySelector('.login-content-left')
+  card.querySelector('.newNotice').onclick = () => notice.classList.toggle('notice-hide')
+  store.set({ ...store.get(), optimizedUI: true })
+  const button = card.querySelector('.bit-notice-button')
+  assert.equal(button.getAttribute('aria-expanded'), 'false')
+  assert.equal(card.classList.contains('bit-notice-open'), false)
+  button.click()
+  assert.equal(button.getAttribute('aria-expanded'), 'true')
+  assert.equal(notice.classList.contains('notice-hide'), false)
+  h.app.ui.openSettings()
+  assert.equal(button.getAttribute('aria-expanded'), 'false')
+  assert.equal(notice.classList.contains('notice-hide'), true)
+  h.close()
 })
