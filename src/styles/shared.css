@@ -1,0 +1,11 @@
+/* Shared by the page and both shadow roots, including the unstyled page mode. */
+html.bit-optimized-ui,
+:host {
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC',
+    'Source Han Sans SC', 'Noto Sans', Arial, sans-serif;
+  --switch-width: 32px;
+  --switch-height: 18px;
+  --switch-thumb: 14px;
+}

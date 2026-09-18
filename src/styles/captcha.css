@@ -1,0 +1,92 @@
+html.bit-optimized-ui {
+  & .cdk-overlay-pane:has(rg-captcha-code-web-dialog) {
+    width: 350px !important;
+    max-width: calc(100vw - 32px) !important;
+  }
+  & .mat-dialog-container:has(rg-captcha-code-web-dialog) {
+    padding: 24px;
+    max-height: calc(100dvh - 32px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: 0 16px 48px #0003;
+    font-family: var(--font-ui);
+  }
+  & rg-captcha-code-web-dialog {
+    display: block;
+    font: 400 14px/1.5 var(--font-ui);
+    & .dialog-title {
+      margin: 0 0 20px;
+      color: var(--foreground);
+      font: 600 18px/1.5 var(--font-ui);
+    }
+    & .mat-dialog-content {
+      margin: 0;
+      padding: 0;
+      max-height: none;
+      overflow: visible;
+    }
+    & .captcha-row {
+      margin: 0;
+      gap: 12px;
+    }
+    & .captcha-refresh a {
+      color: var(--muted-foreground) !important;
+      font: inherit !important;
+      text-underline-offset: 4px;
+    }
+    & .captcha-refresh a:hover {
+      color: var(--foreground) !important;
+      text-decoration: underline;
+    }
+    & .captcha-input {
+      height: var(--control-height) !important;
+      padding: 0 12px !important;
+      border: 1px solid var(--input) !important;
+      border-radius: 8px !important;
+      background: var(--field-background) !important;
+      color: var(--foreground) !important;
+      font: var(--login-input-font) !important;
+      box-shadow: var(--field-shadow);
+    }
+    & .captcha-input::placeholder {
+      color: var(--muted-foreground);
+      opacity: 1;
+    }
+    & .captcha-input:focus {
+      border-color: var(--muted-foreground) !important;
+      box-shadow: var(--field-focus-shadow);
+    }
+    & .dialog-actions {
+      gap: 8px;
+      padding: 0;
+      margin: 20px 0 0;
+      min-height: 0;
+    }
+    & .dialog-actions .btn {
+      margin: 0 !important;
+      height: var(--control-height) !important;
+      border: 1px solid var(--input) !important;
+      border-radius: 8px !important;
+      background: transparent !important;
+      color: var(--foreground) !important;
+      font: 500 14px/1.5 var(--font-ui) !important;
+    }
+    & .dialog-actions .btn:hover {
+      background: var(--muted) !important;
+    }
+    & .dialog-actions .btn-confirm {
+      border: 0 !important;
+      background: var(--primary) !important;
+      color: var(--primary-foreground) !important;
+    }
+    & .dialog-actions .btn-confirm:hover {
+      background: color-mix(in oklch, var(--primary) 90%, transparent) !important;
+    }
+    & :is(button, a):focus-visible {
+      outline: 2px solid var(--foreground);
+      outline-offset: 3px;
+    }
+  }
+}

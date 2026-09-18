@@ -1,0 +1,219 @@
+:host([data-modern]) #sso-tip {
+  margin-bottom: 0;
+}
+:host([data-modern]) .sso-info:not(.error):not(.success) {
+  background: var(--card);
+  border-color: var(--input);
+  color: var(--foreground);
+  border-radius: 8px;
+}
+:host([data-modern]) .sso-info {
+  height: var(--control-height);
+  border-radius: calc(var(--radius) - 2px);
+}
+:host([data-modern]) .sso-info.clickable:hover {
+  background: var(--muted);
+}
+:host([data-modern]) .sso-title {
+  color: var(--foreground);
+}
+:host([data-modern]) :is(.sso-label, .sso-checkbox-text) {
+  color: var(--muted-foreground);
+}
+:host([data-modern]) .sso-checkbox-text {
+  font: var(--switch-label-font);
+}
+:host([data-modern]) .sso-btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: calc(var(--radius) - 2px);
+  font-weight: 500;
+}
+:host([data-modern]) .sso-btn-primary:hover {
+  background: color-mix(in oklch, var(--primary) 90%, transparent);
+}
+:host([data-modern]) #sso-tip .sso-settings {
+  display: none;
+}
+@keyframes sso-reveal {
+  from {
+    clip-path: inset(calc(100% - 32px) 0 0 calc(100% - 48px) round 6px);
+  }
+  to {
+    clip-path: inset(0 round 4px);
+  }
+}
+:host(.inline-settings) .sso-overlay {
+  position: absolute;
+  background: var(--muted);
+  border-radius: 4px;
+  animation: sso-reveal 200ms ease both;
+  display: block;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@keyframes sso-conceal {
+  from {
+    clip-path: inset(0 round 4px);
+  }
+  to {
+    clip-path: inset(calc(100% - 32px) 0 0 calc(100% - 48px) round 6px);
+  }
+}
+:host(.inline-settings) .sso-overlay.closing {
+  animation: sso-conceal 200ms ease forwards;
+}
+:host(.inline-settings) .sso-overlay.closing .sso-dialog {
+  animation: none;
+}
+:host(.inline-settings) .sso-dialog {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(5, auto) minmax(32px, 1fr);
+  align-content: start;
+  gap: var(--field-gap);
+  width: 100%;
+  min-height: 100%;
+  max-width: none;
+  --settings-padding: 24px;
+  padding: 24px var(--settings-padding) var(--footer-gap);
+  max-height: none;
+  overflow: visible;
+  background: var(--muted);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+:host(.inline-settings) .sso-title {
+  text-align: left;
+  font-size: 16px;
+  line-height: 1.5;
+}
+:host(.inline-settings) .sso-heading {
+  grid-column: 1 / -1;
+  margin-bottom: 8px;
+}
+:host(.inline-settings) .sso-heading .sso-modern-toggle {
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+:host(.inline-settings) .sso-heading .sso-checkbox-text {
+  font-size: 12px;
+}
+:host(.inline-settings) .sso-field {
+  grid-column: 1 / -1;
+  position: relative;
+  min-width: 0;
+  margin: 0;
+}
+:host(.inline-settings) .sso-label {
+  position: absolute;
+  clip-path: inset(100%);
+}
+.sso-field ion-icon {
+  display: none;
+}
+:host(.inline-settings) .sso-field ion-icon {
+  display: block;
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: var(--foreground);
+  pointer-events: none;
+}
+:host(.inline-settings) .sso-input {
+  color: var(--foreground);
+  font: var(--login-input-font);
+  height: var(--control-height);
+  padding: 3px 12px 3px 34px;
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--field-background);
+  border-color: var(--input);
+  box-shadow: var(--field-shadow);
+}
+:host([data-modern]) .sso-input:is(:autofill, :-webkit-autofill) {
+  -webkit-text-fill-color: var(--foreground) !important;
+  caret-color: var(--foreground);
+}
+:host(.inline-settings) .sso-input::placeholder {
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+:host(.inline-settings) .sso-input:focus {
+  outline: none;
+  border-color: var(--muted-foreground);
+  box-shadow: var(--field-focus-shadow);
+}
+:host(.inline-settings) .sso-checkbox-label {
+  flex-wrap: wrap;
+  min-width: 0;
+  min-height: var(--footer-height);
+  margin: 0;
+}
+:host(.inline-settings) .sso-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-top: 4px;
+}
+:host(.inline-settings) .sso-btn {
+  min-height: var(--control-height);
+}
+:host(.inline-settings) .sso-footnote {
+  grid-column: 1 / -1;
+  min-height: var(--footer-height);
+  margin: 12px calc(-1 * var(--settings-padding)) 0;
+  grid-template-columns: var(--footer-width) minmax(0, 1fr) var(--footer-width);
+  gap: 0;
+  align-self: end;
+}
+:host(.inline-settings) .sso-footnote .sso-btn-reset {
+  min-height: var(--footer-height);
+  width: var(--footer-width);
+  transform: translateX(var(--footer-gap));
+  justify-self: stretch;
+  text-align: center;
+}
+:host(.inline-settings) a {
+  color: var(--muted-foreground);
+  text-decoration: none;
+  text-underline-offset: 4px;
+}
+:host(.inline-settings) a:hover {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+:host .sso-footnote .sso-btn-reset {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ef4444;
+  font-size: 12px;
+}
+.sso-footnote .sso-btn-reset:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  :host(.inline-settings) .sso-overlay {
+    animation-duration: 1ms;
+  }
+}
+
+@media (max-width: 480px) {
+  :host(.inline-settings) .sso-title {
+    font-size: 14px;
+  }
+  :host(.inline-settings) .sso-dialog {
+    --settings-padding: 16px;
+  }
+  :host(.inline-settings) .sso-footnote {
+    font-size: 10px;
+  }
+}

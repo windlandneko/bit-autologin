@@ -1,0 +1,146 @@
+html.bit-optimized-ui {
+  & #contentContainer .filterColor,
+  & #contentContainer .eyes-icon,
+  & #contentContainer ion-icon {
+    color: var(--foreground) !important;
+  }
+  & :is(.newNotice, .newHideNotice) {
+    display: none !important;
+  }
+  & .bit-notice-button,
+  & .bit-settings-button,
+  & .bit-theme-button,
+  & #contentContainer .topFunctionColor {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--background);
+    color: var(--foreground) !important;
+    font-family: inherit;
+    font-size: 12px;
+    box-shadow: none;
+    line-height: 1;
+    box-sizing: border-box;
+  }
+  & .bit-notice-button,
+  & .bit-settings-button,
+  & .bit-theme-button {
+    position: absolute;
+    cursor: pointer;
+  }
+  & :is(.bit-notice-button, .bit-settings-button) {
+    bottom: var(--footer-gap);
+    z-index: 30;
+    width: var(--footer-width);
+    height: var(--footer-height);
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    transition:
+      color 150ms,
+      transform 200ms ease;
+  }
+  & #contentContainer :is(.bit-notice-button, .bit-settings-button) {
+    color: var(--muted-foreground) !important;
+  }
+  & #contentContainer :is(.bit-notice-button, .bit-settings-button):hover {
+    color: var(--foreground) !important;
+  }
+  & .bit-notice-button {
+    left: var(--footer-gap);
+  }
+  & .bit-settings-button {
+    right: var(--footer-gap);
+  }
+  & .bit-settings-button[aria-expanded='true'] {
+    transform: translate(calc(-1 * var(--footer-gap)), calc(-1 * var(--footer-gap)));
+  }
+  & .bit-notice-button[aria-expanded='true'] {
+    transform: translate(var(--footer-gap), calc(-1 * var(--footer-gap)));
+  }
+  /* Keep the opposite action below the panel throughout opening and closing. */
+  & .bit-settings-open > .bit-notice-button,
+  & .bit-notice-open > .bit-settings-button,
+  & .bit-notice-closing:not(.bit-settings-open) > .bit-settings-button {
+    z-index: 10;
+    pointer-events: none;
+  }
+  & .bit-theme-button {
+    top: 20px;
+    right: 20px;
+    z-index: 60;
+    width: 32px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  & #contentContainer .topFunctionColor,
+  & #contentContainer .topFunctionColor * {
+    user-select: none;
+    cursor: pointer;
+    box-shadow: none !important;
+  }
+  & #contentContainer .topFunctionColor,
+  & #contentContainer .topFunctionColor > span {
+    font: var(--switch-label-font) !important;
+    color: var(--muted-foreground) !important;
+  }
+  & .topFunctionColor nz-switch {
+    display: flex;
+    align-items: center;
+  }
+  & .bit-notice-button[hidden] {
+    display: none;
+  }
+  & .bit-theme-button:hover {
+    background: var(--muted);
+  }
+  & .topFunctionColor .ant-switch:not(.ant-switch-checked) {
+    background: var(--input) !important;
+  }
+  & .topFunctionColor .ant-switch {
+    margin: 0 !important;
+    top: auto !important;
+    box-shadow: none !important;
+    vertical-align: middle;
+    width: var(--switch-width);
+    min-width: var(--switch-width);
+    height: var(--switch-height);
+    border: 1px solid transparent;
+    border-radius: 999px;
+  }
+  & .topFunctionColor .ant-switch-handle {
+    top: 1px;
+    left: 1px;
+    width: var(--switch-thumb);
+    height: var(--switch-thumb);
+  }
+  & .topFunctionColor .ant-switch-handle::before {
+    box-shadow: none !important;
+    border-radius: 50%;
+  }
+  & .topFunctionColor .ant-switch-checked .ant-switch-handle {
+    left: calc(var(--switch-width) - var(--switch-thumb) - 3px);
+  }
+  & .ant-switch-checked {
+    background: var(--primary) !important;
+  }
+  & .ant-switch-checked .ant-switch-handle::before {
+    background: var(--primary-foreground);
+  }
+}
+
+@media (pointer: coarse) {
+  html.bit-optimized-ui .bit-theme-button {
+    width: 44px;
+    height: 44px;
+    top: 14px;
+    right: 14px;
+  }
+}

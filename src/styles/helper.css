@@ -1,0 +1,308 @@
+/* Shadow roots also need explicit form-control font inheritance. */
+:host {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+}
+button,
+input {
+  font-family: inherit;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--foreground, #333);
+  outline-offset: 3px;
+}
+@keyframes sso-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes sso-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sso-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sso-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes sso-scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+#sso-tip {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  margin-bottom: 32px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-family: inherit;
+  user-select: none;
+}
+.sso-info,
+.sso-settings {
+  box-sizing: border-box;
+  height: 36px;
+  font: inherit;
+  padding: 0 15px;
+  border-radius: 4px;
+  background: #fff;
+  border: 1px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  transition: background 0.2s ease;
+}
+.sso-info {
+  flex: 1;
+  gap: 8px;
+}
+.sso-info.clickable,
+.sso-settings {
+  cursor: pointer;
+}
+.sso-info.clickable:hover,
+.sso-settings:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+.sso-info.success {
+  --status-color: rgba(76, 175, 80, 0.9);
+}
+.sso-info.error {
+  --status-color: rgba(255, 77, 79, 0.9);
+}
+.sso-info.success,
+.sso-info.error {
+  background: var(--status-color);
+  border-color: var(--status-color);
+  color: #fff;
+}
+.sso-info.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sso-spinner {
+  width: 14px;
+  height: 14px;
+  animation: sso-spin 1s linear infinite;
+}
+.sso-info:not(.loading) :is(.sso-spinner, .sso-cancel) {
+  display: none;
+}
+.sso-cancel {
+  margin-left: auto;
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+.sso-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: sso-fade-in 0.2s ease;
+}
+.sso-overlay.closing {
+  animation: sso-fade-out 0.15s ease forwards;
+}
+.sso-dialog {
+  background: #fff;
+  padding: 32px 32px 18px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  width: 400px;
+  max-width: 90vw;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  user-select: none;
+  animation: sso-scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.sso-overlay.closing .sso-dialog {
+  animation: sso-scale-out 0.15s ease forwards;
+}
+.sso-dialog:focus {
+  outline: none;
+}
+.sso-title {
+  margin: 0;
+  white-space: nowrap;
+  color: #333;
+  font-size: 20px;
+}
+.sso-field {
+  margin-bottom: 15px;
+}
+.sso-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #666;
+  font-size: 14px;
+}
+.sso-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+.sso-checkbox-label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+.sso-checkbox {
+  margin: 0;
+  appearance: none;
+  position: relative;
+  flex: 0 0 var(--switch-width);
+  width: var(--switch-width) !important;
+  height: var(--switch-height) !important;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--input, #ddd);
+  transition: background 150ms;
+  cursor: pointer;
+}
+.sso-checkbox::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: var(--switch-thumb);
+  height: var(--switch-thumb);
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 150ms;
+}
+.sso-checkbox:checked {
+  background: var(--primary, #171717);
+}
+.sso-checkbox:checked::before {
+  transform: translateX(calc(var(--switch-width) - var(--switch-thumb) - 4px));
+  background: var(--primary-foreground, #fff);
+}
+.sso-checkbox:focus-visible {
+  outline: 2px solid var(--muted-foreground, #999);
+  outline-offset: 2px;
+}
+.sso-checkbox-text {
+  color: #666;
+  font-size: 14px;
+}
+.sso-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+.sso-btn {
+  padding: 6px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+.sso-btn-primary {
+  border: none;
+  background: #2196f3;
+  color: #fff;
+}
+.sso-btn-primary:hover {
+  background: #1976d2;
+}
+.sso-btn-primary:active {
+  background: #1565c0;
+}
+.sso-footnote {
+  color: #999;
+  font-size: 12px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 4px;
+  margin-top: 24px;
+  line-height: 1.4;
+}
+
+@media (max-width: 480px), (pointer: coarse) {
+  #sso-tip :is(.sso-info, .sso-settings) {
+    min-height: 44px;
+  }
+  .sso-input {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .sso-btn,
+  .sso-checkbox-label {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sso-overlay,
+  .sso-overlay.closing,
+  .sso-dialog,
+  .sso-overlay.closing .sso-dialog {
+    animation-duration: 1ms;
+  }
+}
+
+.sso-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.sso-heading .sso-modern-toggle {
+  margin: 0;
+  flex-shrink: 0;
+}
+.sso-heading .sso-checkbox-text {
+  font-size: 12px;
+}
+
+.sso-footnote .sso-btn-reset {
+  justify-self: start;
+}
+.sso-credit {
+  grid-column: 2;
+  min-width: 0;
+  text-align: center;
+  text-wrap: balance;
+}

@@ -1,0 +1,242 @@
+html.bit-optimized-ui {
+  & body {
+    background: var(--muted) !important;
+    color: var(--foreground);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  & #contentContainer {
+    position: relative !important;
+    min-height: 100svh;
+    height: auto !important;
+    padding: 40px 32px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    background: var(--muted) !important;
+  }
+  & #contentContainer :is(input, button, select, textarea) {
+    font-family: var(--font-ui);
+  }
+  & .pc-background-none {
+    background: var(--muted) !important;
+  }
+  & .login-title,
+  & .normal-title {
+    display: none;
+  }
+  & .wrap-normal-title {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+  }
+  & .login-title-img {
+    position: static !important;
+    height: 40px !important;
+    max-width: 100%;
+    object-fit: contain;
+  }
+  & .login-content {
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    display: block !important;
+    width: min(440px, 100%) !important;
+    box-sizing: border-box;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: var(--card) !important;
+    background-size: 0 0 !important;
+    border: 1px solid var(--border);
+    border-radius: 12px !important;
+    overflow: hidden;
+    box-shadow: 0 1px 3px #0001;
+    backdrop-filter: none !important;
+  }
+  & .login-content::before {
+    display: none !important;
+  }
+  & .bit-brand-emblem {
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    flex: 0 0 40px;
+  }
+  & .bit-brand-emblem .login-title-img {
+    width: auto !important;
+    max-width: none !important;
+  }
+  & .bit-login-brand {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--foreground);
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  & .bit-brand-name {
+    font-size: 20px;
+    font-weight: 600;
+  }
+  & .bit-brand-subtitle {
+    font-size: 12px;
+  }
+  & .bit-login-header {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  & .bit-login-header h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 600;
+    color: var(--foreground) !important;
+  }
+  & #bit-login-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 24px 0;
+  }
+  & #bit-login-actions > #bit-sso-helper {
+    flex: 1;
+    min-width: 0;
+  }
+  & .bit-login-separator {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    color: var(--muted-foreground);
+    font-size: 14px;
+  }
+  & .bit-login-separator::before,
+  & .bit-login-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  & .toogle-button {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+  }
+  & .toggle-button-container {
+    position: static !important;
+  }
+  & .login-content-left,
+  & .bit-settings-preview {
+    position: absolute !important;
+    z-index: 20;
+    display: block !important;
+    inset: var(--panel-inset) !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 24px 24px 48px;
+    overflow: hidden;
+    box-sizing: border-box;
+    background: transparent !important;
+    border-radius: 4px;
+    clip-path: inset(calc(100% - 32px) calc(100% - 48px) 0 0 round 6px);
+    transition:
+      clip-path 200ms ease,
+      background-color 150ms;
+    pointer-events: none;
+  }
+  & .bit-settings-preview {
+    clip-path: inset(calc(100% - 32px) 0 0 calc(100% - 48px) round 6px);
+  }
+  & .login-content:has(.bit-settings-button:hover) .bit-settings-preview,
+  & .login-content:has(.bit-notice-button:hover) .login-content-left,
+  & .login-content.bit-notice-open .login-content-left {
+    background: var(--muted) !important;
+  }
+  & #gm-sso-config.inline-settings {
+    position: absolute;
+    inset: var(--panel-inset);
+    z-index: 20;
+  }
+  & .login-content.bit-notice-open .login-content-left {
+    clip-path: inset(0 round 4px);
+    pointer-events: auto;
+  }
+  & .login-content-left .notice-content {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 100%;
+    overflow: auto;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+    color: var(--foreground) !important;
+    background: transparent !important;
+    padding: 0 !important;
+    opacity: 0;
+    transition: opacity 100ms;
+  }
+  & .login-content.bit-notice-open .login-content-left .notice-content {
+    opacity: 1;
+    transition-delay: 80ms;
+  }
+  & .login-content-left::after {
+    display: none !important;
+  }
+  & .notice-content-item {
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+  }
+  & .noticTitle {
+    padding: 0 !important;
+    margin: 0 0 24px !important;
+    text-align: left;
+  }
+  & .notice-content p {
+    line-height: 1.8;
+    margin-bottom: 12px;
+  }
+  & .notice-content a {
+    color: var(--foreground) !important;
+    text-decoration: none;
+    text-underline-offset: 3px;
+  }
+  & #login-content-right {
+    position: static !important;
+    float: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 20px 24px 64px !important;
+    background: var(--card) !important;
+    box-sizing: border-box;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+  }
+  & .normal-row,
+  & app-auth-panel-new > .ant-row {
+    padding: 0 !important;
+  }
+  & #contentContainer .topFunctionColor {
+    position: static;
+    transform: none;
+  }
+  & .login-content-right-wrapper,
+  & #login-content-right-inner {
+    width: 100% !important;
+    min-height: 0 !important;
+  }
+}

@@ -1,0 +1,432 @@
+html.bit-optimized-ui {
+  & #contentContainer .ant-tabs-nav::before {
+    border-color: var(--border) !important;
+  }
+  & #contentContainer .ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: var(--foreground) !important;
+  }
+  & .ant-tabs {
+    overflow: visible !important;
+  }
+  & .ant-tabs-content {
+    margin: 0 !important;
+    display: block !important;
+    transform: none !important;
+    transition: none !important;
+    min-height: 216px;
+  }
+  & .ant-tabs-content:has(.ant-tabs-tabpane-active .scanBox) {
+    min-height: 0;
+  }
+  & .ant-tabs-nav {
+    min-height: 40px;
+    margin-bottom: 16px !important;
+  }
+  & .ant-tabs-nav-wrap {
+    overflow: visible !important;
+  }
+  & .ant-tabs-nav-wrap::before,
+  & .ant-tabs-nav-wrap::after,
+  & .ant-tabs-nav-operations,
+  & .ant-tabs-ink-bar {
+    display: none !important;
+  }
+  & .ant-tabs-nav-list {
+    width: 100%;
+    transform: none !important;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 8px;
+  }
+  & #contentContainer .ant-tabs-tab {
+    color: var(--muted-foreground);
+    font-size: 13px !important;
+    font-weight: normal !important;
+    margin: 0 !important;
+    padding: 10px 0 0;
+    border-bottom: 2px solid transparent;
+  }
+  & #contentContainer .ant-tabs-tab-active {
+    border-bottom-color: var(--foreground);
+  }
+  & .auth-tab-title-text {
+    font-size: inherit !important;
+  }
+  & .ant-tabs-tab-btn {
+    font-size: inherit !important;
+    font-weight: 400 !important;
+    line-height: 20px !important;
+  }
+  & .ant-tabs-tabpane {
+    transition: none !important;
+  }
+  & .ant-tabs-tabpane:not(.ant-tabs-tabpane-active) {
+    display: none !important;
+  }
+  & :is(#normalLoginForm, #smsLoginForm, #mailLoginForm, #webauthnLoginForm) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--field-gap);
+  }
+  & .login-normal-item {
+    height: auto !important;
+    min-height: 0;
+    margin: 0 !important;
+    padding-block: 0 !important;
+  }
+  & .login-normal-button {
+    order: 2;
+    margin: 4px 0 0 !important;
+  }
+  & .ant-tabs-content-holder {
+    position: relative;
+    min-height: 216px;
+  }
+  & .ant-tabs-tabpane-active .scanBox {
+    margin-top: 0;
+  }
+  & .ant-tabs-content-holder:has(.scanBox) .ant-tabs-tabpane-active:has(.scanBox) {
+    transform: translateY(-8px);
+  }
+  & #contentContainer .ant-tabs-content-holder .topFunctionColor {
+    position: static !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0 0 !important;
+    min-height: 20px;
+    height: auto;
+    border: 0;
+    background: transparent;
+    padding: 0;
+  }
+  & #contentContainer .ant-tabs-tabpane-active form > .topFunctionColor {
+    order: 1;
+    justify-content: flex-start;
+    margin: 0 !important;
+  }
+  & #contentContainer .item-input-group:has(app-sms-code) {
+    padding-right: 5px;
+  }
+  & #contentContainer .item-input-group:has(app-sms-code) .ant-input-suffix {
+    align-items: center;
+    margin-left: 8px;
+  }
+  & #contentContainer app-sms-code,
+  & #contentContainer app-sms-code .input-decorator-icon {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    margin: 0;
+    line-height: 1;
+  }
+  & #contentContainer app-sms-code :is(.font-class-text-button, .wait-send-again-text) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    padding: 2px 8px;
+    line-height: 18px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 4px);
+    background: var(--muted);
+    color: var(--foreground) !important;
+    font-size: 12px;
+    text-decoration: none !important;
+    white-space: nowrap;
+    transition:
+      background-color 150ms,
+      color 150ms,
+      border-color 150ms;
+  }
+  & #contentContainer app-sms-code .wait-send-again-text {
+    color: var(--muted-foreground) !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+  }
+  & #smsLoginForm .login-normal-action {
+    position: static;
+    order: 3;
+    width: 100%;
+    margin: 0 !important;
+    line-height: 20px;
+  }
+  & #smsLoginForm .login-normal-describe {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px 8px;
+  }
+  & #smsLoginForm .tips {
+    flex: 1 1 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  & #smsLoginForm .tips :is(label, span) {
+    color: var(--muted-foreground) !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    line-height: 20px;
+  }
+  & #smsLoginForm .verification-code-error-color {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+  }
+  & #contentContainer app-sms-code .font-class-text-button:hover {
+    text-decoration: none !important;
+    background: color-mix(in oklch, var(--foreground) 12%, var(--card));
+  }
+  & #contentContainer .item-input-group {
+    min-height: var(--control-height);
+    height: var(--control-height) !important;
+    box-sizing: border-box;
+    padding: 3px 12px;
+    align-items: center;
+    border: 1px solid var(--input) !important;
+    border-radius: calc(var(--radius) - 2px) !important;
+    background: var(--field-background) !important;
+    box-shadow: var(--field-shadow);
+  }
+  & #contentContainer .item-input-group:focus-within {
+    border-color: var(--muted-foreground) !important;
+    box-shadow: var(--field-focus-shadow);
+  }
+  & #contentContainer .login-button:hover {
+    background: color-mix(in oklch, var(--primary) 90%, transparent) !important;
+  }
+  & .bit-bottom-links {
+    position: absolute;
+    bottom: 8px;
+    left: 64px;
+    right: 64px;
+    z-index: 1;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+  }
+  & .bit-bottom-links .login-panel-box {
+    position: static !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px 8px;
+  }
+  & #contentContainer :is(.bit-bottom-links, .bit-login-footer) :is(a, span, button) {
+    font-size: 12px !important;
+    font-weight: 400;
+  }
+  & :is(.bit-bottom-links, .bit-login-footer) > [hidden] {
+    display: none !important;
+  }
+  & .bit-login-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    order: 1;
+    min-width: 0;
+  }
+  & .ant-tabs-content-holder:has(.ant-tabs-tabpane-active .scanBox) > .bit-login-options {
+    justify-content: center;
+  }
+  & .bit-login-footer:not(:has(> :not([hidden]))) {
+    display: none;
+  }
+  & #contentContainer .bit-login-options > .topFunctionColor {
+    margin: 0 !important;
+    flex: 0 0 auto;
+  }
+  & .bit-login-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: right;
+  }
+  & .bit-login-footer :is(.login-panel-box, .last-action, .passkey-use) {
+    position: static !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-wrap: anywhere;
+  }
+  & .bit-login-footer .ant-btn-link {
+    height: auto;
+    padding: 0;
+    border: 0;
+  }
+  /* Ant buttons wrap their text in an inline-block, which blocks decoration propagation. */
+  & .bit-login-footer .ant-btn-link > span {
+    text-decoration: inherit;
+  }
+  & #contentContainer .eyes-icon {
+    position: absolute !important;
+    right: 6px !important;
+    top: 50% !important;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  & #contentContainer .eyes-icon :is(i, svg) {
+    color: var(--muted-foreground) !important;
+    display: block;
+    line-height: 1;
+  }
+  & #contentContainer .eyes-icon:hover :is(i, svg) {
+    color: var(--foreground) !important;
+  }
+  & #contentContainer .passwordInput input.ant-input {
+    padding-right: 28px !important;
+  }
+  & .login-notice-list {
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  & #contentContainer .ant-input-prefix {
+    flex: 0 0 14px;
+    width: 14px;
+    margin-right: 8px;
+  }
+  & #contentContainer .ant-input-prefix ion-icon {
+    width: 14px;
+    height: 14px;
+    font-size: 14px;
+  }
+  & #contentContainer .ant-input {
+    font: var(--login-input-font) !important;
+    background: transparent !important;
+    height: 28px !important;
+    line-height: 28px !important;
+    padding: 0 !important;
+    min-width: 0;
+    color: var(--foreground) !important;
+    caret-color: var(--foreground);
+    box-shadow: none !important;
+  }
+  & #contentContainer .ant-input:is(:autofill, :-webkit-autofill) {
+    -webkit-text-fill-color: var(--foreground) !important;
+    caret-color: var(--foreground);
+  }
+  & #contentContainer .ant-input::placeholder {
+    color: var(--muted-foreground) !important;
+  }
+  & #contentContainer .login-button {
+    height: var(--control-height);
+    border-radius: calc(var(--radius) - 2px) !important;
+    background: var(--primary) !important;
+    border: 0 !important;
+    color: var(--primary-foreground) !important;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: none !important;
+  }
+  & #contentContainer .login-button ion-icon {
+    color: var(--primary-foreground) !important;
+  }
+  & #contentContainer .login-button.disabled,
+  & #contentContainer .login-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  & #contentContainer rg-copyright {
+    position: static !important;
+    order: 2;
+    width: auto;
+    max-width: 100%;
+  }
+  & #contentContainer .phone-copyright {
+    position: static !important;
+    color: var(--muted-foreground) !important;
+    text-align: center;
+    line-height: 1.8;
+    padding: 0 !important;
+  }
+  & #contentContainer :is(a, .forgetPassword, .light-app) {
+    color: var(--muted-foreground) !important;
+    text-decoration: none !important;
+    text-underline-offset: 4px;
+    transition: color 150ms;
+    cursor: pointer;
+  }
+  & #contentContainer :is(a, .forgetPassword, .light-app):hover {
+    color: var(--foreground) !important;
+    text-decoration: underline !important;
+  }
+  & #contentContainer :is(button, a, .ant-tabs-tab-btn):focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 3px;
+  }
+  @media (pointer: coarse) {
+    & #contentContainer .topFunctionColor {
+      min-height: 44px;
+    }
+    & #contentContainer .eyes-icon {
+      width: 40px;
+      height: 40px;
+    }
+    & #contentContainer .passwordInput input.ant-input {
+      padding-right: 40px !important;
+    }
+    & #contentContainer .ant-tabs-tab {
+      min-height: 44px;
+      box-sizing: border-box;
+    }
+  }
+  @media (max-height: 600px) {
+    & #contentContainer {
+      justify-content: flex-start;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    & .login-content-left {
+      transition: none;
+    }
+  }
+  @media (max-width: 480px) {
+    & #contentContainer {
+      padding: max(24px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+        max(24px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      justify-content: flex-start;
+    }
+    & #login-content-right {
+      padding: 20px 20px 64px !important;
+    }
+    & .ant-tabs-nav-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    & #contentContainer .ant-tabs-tab {
+      justify-content: center;
+    }
+    & #contentContainer .phone-copyright {
+      white-space: normal;
+      font-size: 11px;
+    }
+  }
+}

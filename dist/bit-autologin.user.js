@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [BIT AutoLogin] 一键登录北理工统一身份认证
 // @namespace    https://bit.edu.cn/
-// @version      2.1.0
+// @version      2.1.1
 // @description  自动登录所有需要北理工统一身份认证的网站！
 // @author       windlandneko
 // @homepageURL  https://github.com/windlandneko/bit-autologin
@@ -16,6 +16,53 @@
 // @license      MIT
 // ==/UserScript==
 (function() {
+	//#region src/panel.js
+	function setPanelButton(button, label, expanded = false) {
+		if (!button || button.getAttribute("aria-expanded") === String(expanded)) return;
+		button.setAttribute("aria-expanded", String(expanded));
+		button.textContent = expanded ? "收起" : label;
+		button.ariaLabel = expanded ? `收起${label}` : label;
+	}
+	//#endregion
+	//#region src/captcha-dialog.js
+	function mountCaptchaDialog(document) {
+		let enterHandled = false;
+		function stopEnter(event) {
+			event.preventDefault();
+			event.stopImmediatePropagation();
+		}
+		function onKeyup(event) {
+			if (event.key !== "Enter" || !enterHandled) return;
+			enterHandled = false;
+			stopEnter(event);
+		}
+		function onKeydown(event) {
+			if (event.key === "Enter" && event.repeat && enterHandled) {
+				stopEnter(event);
+				return;
+			}
+			if (event.key !== "Enter" || event.isComposing || event.keyCode === 229 || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
+			const confirm = (event.target.closest("input")?.closest("rg-captcha-code-web-dialog"))?.querySelector(".btn-confirm");
+			if (!confirm) return;
+			enterHandled = true;
+			stopEnter(event);
+			if (!confirm.disabled && !confirm.matches("[disabled], [aria-disabled=\"true\"], [aria-busy=\"true\"]")) confirm.click();
+		}
+		function onClick(event) {
+			if (!event.target.matches(".cdk-overlay-backdrop")) return;
+			const panes = event.target.parentElement.querySelectorAll(".cdk-overlay-pane");
+			panes[panes.length - 1]?.querySelector("rg-captcha-code-web-dialog .btn-cancel")?.click();
+		}
+		document.addEventListener("keydown", onKeydown, true);
+		document.addEventListener("keyup", onKeyup, true);
+		document.addEventListener("click", onClick);
+		return () => {
+			document.removeEventListener("keydown", onKeydown, true);
+			document.removeEventListener("keyup", onKeyup, true);
+			document.removeEventListener("click", onClick);
+		};
+	}
+	//#endregion
 	//#region src/protocol.js
 	function loginRoute(href) {
 		const url = new URL(href);
@@ -179,198 +226,50 @@
 		}
 	}
 	//#endregion
+	//#region src/styles/shared.css?raw
+	var shared_default = "/* Shared by the page and both shadow roots, including the unstyled page mode. */\nhtml.bit-optimized-ui,\n:host {\n  --font-ui:\n    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'PingFang SC',\n    'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC',\n    'Source Han Sans SC', 'Noto Sans', Arial, sans-serif;\n  --switch-width: 32px;\n  --switch-height: 18px;\n  --switch-thumb: 14px;\n}\n";
+	//#endregion
+	//#region src/styles/tokens.css?raw
+	var tokens_default = "html.bit-optimized-ui {\n  /* Neutral tokens and spacing from shadcn/ui new-york-v4, login-03. */\n  color-scheme: light;\n  --control-height: 38px;\n  --input-size: 14px;\n  --field-gap: 12px;\n  --footer-gap: 8px;\n  --footer-width: 48px;\n  --footer-height: 32px;\n  --panel-inset: 68px var(--footer-gap) var(--footer-gap);\n  --field-shadow: 0 1px 2px #0001;\n  --field-focus-shadow: 0 0 0 3px color-mix(in oklch, var(--muted-foreground) 50%, transparent);\n  --switch-label-font: 400 14px/1.5 var(--font-ui);\n  --login-input-font: 400 var(--input-size)/1.5 var(--font-ui);\n  --background: oklch(1 0 0);\n  --foreground: oklch(0.145 0 0);\n  --card: oklch(1 0 0);\n  --muted: oklch(0.97 0 0);\n  --muted-foreground: oklch(0.556 0 0);\n  --border: oklch(0.922 0 0);\n  --primary: oklch(0.205 0 0);\n  --primary-foreground: oklch(0.985 0 0);\n  --field-background: transparent;\n  --input: oklch(0.922 0 0);\n  --radius: 0.625rem;\n  background: var(--muted);\n  @media (max-width: 480px), (pointer: coarse) {\n    --control-height: 44px;\n    --input-size: 16px;\n  }\n  @media (pointer: coarse) {\n    --footer-height: 44px;\n  }\n  &[data-bit-theme='dark'] {\n    color-scheme: dark;\n    --background: oklch(0.145 0 0);\n    --foreground: oklch(0.985 0 0);\n    --card: oklch(0.205 0 0);\n    --muted: oklch(0.269 0 0);\n    --muted-foreground: oklch(0.708 0 0);\n    --border: oklch(1 0 0 / 10%);\n    --primary: oklch(0.922 0 0);\n    --primary-foreground: oklch(0.205 0 0);\n    --input: oklch(1 0 0 / 15%);\n    --field-background: color-mix(in oklch, var(--input) 30%, transparent);\n  }\n}\n";
+	//#endregion
+	//#region src/styles/page.css?raw
+	var page_default = "html.bit-optimized-ui {\n  & body {\n    background: var(--muted) !important;\n    color: var(--foreground);\n    font-family: var(--font-ui);\n    font-size: 14px;\n    line-height: 1.5;\n    -webkit-text-size-adjust: 100%;\n    text-size-adjust: 100%;\n  }\n  & #contentContainer {\n    position: relative !important;\n    min-height: 100svh;\n    height: auto !important;\n    padding: 40px 32px;\n    box-sizing: border-box;\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;\n    gap: 24px;\n    background: var(--muted) !important;\n  }\n  & #contentContainer :is(input, button, select, textarea) {\n    font-family: var(--font-ui);\n  }\n  & .pc-background-none {\n    background: var(--muted) !important;\n  }\n  & .login-title,\n  & .normal-title {\n    display: none;\n  }\n  & .wrap-normal-title {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 20px;\n    align-items: center;\n  }\n  & .login-title-img {\n    position: static !important;\n    height: 40px !important;\n    max-width: 100%;\n    object-fit: contain;\n  }\n  & .login-content {\n    position: relative !important;\n    inset: auto !important;\n    transform: none !important;\n    display: block !important;\n    width: min(440px, 100%) !important;\n    box-sizing: border-box;\n    height: auto !important;\n    min-height: 0 !important;\n    margin: 0 !important;\n    padding: 0 !important;\n    background-color: var(--card) !important;\n    background-size: 0 0 !important;\n    border: 1px solid var(--border);\n    border-radius: 12px !important;\n    overflow: hidden;\n    box-shadow: 0 1px 3px #0001;\n    backdrop-filter: none !important;\n  }\n  & .login-content::before {\n    display: none !important;\n  }\n  & .bit-brand-emblem {\n    width: 40px;\n    height: 40px;\n    overflow: hidden;\n    flex: 0 0 40px;\n  }\n  & .bit-brand-emblem .login-title-img {\n    width: auto !important;\n    max-width: none !important;\n  }\n  & .bit-login-brand {\n    position: relative;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    gap: 6px;\n    color: var(--foreground);\n    flex-wrap: wrap;\n    max-width: 100%;\n  }\n  & .bit-brand-name {\n    font-size: 20px;\n    font-weight: 600;\n  }\n  & .bit-brand-subtitle {\n    font-size: 12px;\n  }\n  & .bit-login-header {\n    width: 100%;\n    text-align: center;\n    margin-bottom: 8px;\n  }\n  & .bit-login-header h1 {\n    margin: 0 0 8px;\n    font-size: 24px;\n    line-height: 32px;\n    font-weight: 600;\n    color: var(--foreground) !important;\n  }\n  & #bit-login-actions {\n    display: flex;\n    align-items: center;\n    gap: 10px;\n    margin: 24px 0;\n  }\n  & #bit-login-actions > #bit-sso-helper {\n    flex: 1;\n    min-width: 0;\n  }\n  & .bit-login-separator {\n    display: flex;\n    gap: 12px;\n    align-items: center;\n    color: var(--muted-foreground);\n    font-size: 14px;\n  }\n  & .bit-login-separator::before,\n  & .bit-login-separator::after {\n    content: '';\n    flex: 1;\n    height: 1px;\n    background: var(--border);\n  }\n  & .toogle-button {\n    position: absolute;\n    bottom: 16px;\n    left: 16px;\n  }\n  & .toggle-button-container {\n    position: static !important;\n  }\n  & .login-content-left,\n  & .bit-settings-preview {\n    position: absolute !important;\n    z-index: 20;\n    display: block !important;\n    inset: var(--panel-inset) !important;\n    width: auto !important;\n    height: auto !important;\n    min-height: 0 !important;\n    padding: 24px 24px 48px;\n    overflow: hidden;\n    box-sizing: border-box;\n    background: transparent !important;\n    border-radius: 4px;\n    clip-path: inset(calc(100% - 32px) calc(100% - 48px) 0 0 round 6px);\n    transition:\n      clip-path 200ms ease,\n      background-color 150ms;\n    pointer-events: none;\n  }\n  & .bit-settings-preview {\n    clip-path: inset(calc(100% - 32px) 0 0 calc(100% - 48px) round 6px);\n  }\n  & .login-content:has(.bit-settings-button:hover) .bit-settings-preview,\n  & .login-content:has(.bit-notice-button:hover) .login-content-left,\n  & .login-content.bit-notice-open .login-content-left {\n    background: var(--muted) !important;\n  }\n  & #gm-sso-config.inline-settings {\n    position: absolute;\n    inset: var(--panel-inset);\n    z-index: 20;\n  }\n  & .login-content.bit-notice-open .login-content-left {\n    clip-path: inset(0 round 4px);\n    pointer-events: auto;\n  }\n  & .login-content-left .notice-content {\n    width: 100% !important;\n    min-width: 0 !important;\n    max-width: 100% !important;\n    height: 100%;\n    overflow: auto;\n    box-sizing: border-box;\n    overflow-wrap: anywhere;\n    color: var(--foreground) !important;\n    background: transparent !important;\n    padding: 0 !important;\n    opacity: 0;\n    transition: opacity 100ms;\n  }\n  & .login-content.bit-notice-open .login-content-left .notice-content {\n    opacity: 1;\n    transition-delay: 80ms;\n  }\n  & .login-content-left::after {\n    display: none !important;\n  }\n  & .notice-content-item {\n    width: auto !important;\n    min-width: 0 !important;\n    padding: 0 !important;\n  }\n  & .noticTitle {\n    padding: 0 !important;\n    margin: 0 0 24px !important;\n    text-align: left;\n  }\n  & .notice-content p {\n    line-height: 1.8;\n    margin-bottom: 12px;\n  }\n  & .notice-content a {\n    color: var(--foreground) !important;\n    text-decoration: none;\n    text-underline-offset: 3px;\n  }\n  & #login-content-right {\n    position: static !important;\n    float: none !important;\n    width: auto !important;\n    min-width: 0 !important;\n    min-height: 0 !important;\n    padding: 20px 24px 64px !important;\n    background: var(--card) !important;\n    box-sizing: border-box;\n    align-self: stretch;\n    display: flex;\n    align-items: center;\n  }\n  & .normal-row,\n  & app-auth-panel-new > .ant-row {\n    padding: 0 !important;\n  }\n  & #contentContainer .topFunctionColor {\n    position: static;\n    transform: none;\n  }\n  & .login-content-right-wrapper,\n  & #login-content-right-inner {\n    width: 100% !important;\n    min-height: 0 !important;\n  }\n}\n";
+	//#endregion
+	//#region src/styles/controls.css?raw
+	var controls_default = "html.bit-optimized-ui {\n  & #contentContainer .filterColor,\n  & #contentContainer .eyes-icon,\n  & #contentContainer ion-icon {\n    color: var(--foreground) !important;\n  }\n  & :is(.newNotice, .newHideNotice) {\n    display: none !important;\n  }\n  & .bit-notice-button,\n  & .bit-settings-button,\n  & .bit-theme-button,\n  & #contentContainer .topFunctionColor {\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    gap: 8px;\n    height: 32px;\n    padding: 0 12px;\n    border: 1px solid var(--border);\n    border-radius: var(--radius);\n    background: var(--background);\n    color: var(--foreground) !important;\n    font-family: inherit;\n    font-size: 12px;\n    box-shadow: none;\n    line-height: 1;\n    box-sizing: border-box;\n  }\n  & .bit-notice-button,\n  & .bit-settings-button,\n  & .bit-theme-button {\n    position: absolute;\n    cursor: pointer;\n  }\n  & :is(.bit-notice-button, .bit-settings-button) {\n    bottom: var(--footer-gap);\n    z-index: 30;\n    width: var(--footer-width);\n    height: var(--footer-height);\n    padding: 0;\n    background: transparent;\n    border: 0;\n    border-radius: 6px;\n    transition:\n      color 150ms,\n      transform 200ms ease;\n  }\n  & #contentContainer :is(.bit-notice-button, .bit-settings-button) {\n    color: var(--muted-foreground) !important;\n  }\n  & #contentContainer :is(.bit-notice-button, .bit-settings-button):hover {\n    color: var(--foreground) !important;\n  }\n  & .bit-notice-button {\n    left: var(--footer-gap);\n  }\n  & .bit-settings-button {\n    right: var(--footer-gap);\n  }\n  & .bit-settings-button[aria-expanded='true'] {\n    transform: translate(calc(-1 * var(--footer-gap)), calc(-1 * var(--footer-gap)));\n  }\n  & .bit-notice-button[aria-expanded='true'] {\n    transform: translate(var(--footer-gap), calc(-1 * var(--footer-gap)));\n  }\n  /* Keep the opposite action below the panel throughout opening and closing. */\n  & .bit-settings-open > .bit-notice-button,\n  & .bit-notice-open > .bit-settings-button,\n  & .bit-notice-closing:not(.bit-settings-open) > .bit-settings-button {\n    z-index: 10;\n    pointer-events: none;\n  }\n  & .bit-theme-button {\n    top: 20px;\n    right: 20px;\n    z-index: 60;\n    width: 32px;\n    padding: 0;\n    border: 0;\n    background: transparent;\n  }\n  & #contentContainer .topFunctionColor,\n  & #contentContainer .topFunctionColor * {\n    user-select: none;\n    cursor: pointer;\n    box-shadow: none !important;\n  }\n  & #contentContainer .topFunctionColor,\n  & #contentContainer .topFunctionColor > span {\n    font: var(--switch-label-font) !important;\n    color: var(--muted-foreground) !important;\n  }\n  & .topFunctionColor nz-switch {\n    display: flex;\n    align-items: center;\n  }\n  & .bit-notice-button[hidden] {\n    display: none;\n  }\n  & .bit-theme-button:hover {\n    background: var(--muted);\n  }\n  & .topFunctionColor .ant-switch:not(.ant-switch-checked) {\n    background: var(--input) !important;\n  }\n  & .topFunctionColor .ant-switch {\n    margin: 0 !important;\n    top: auto !important;\n    box-shadow: none !important;\n    vertical-align: middle;\n    width: var(--switch-width);\n    min-width: var(--switch-width);\n    height: var(--switch-height);\n    border: 1px solid transparent;\n    border-radius: 999px;\n  }\n  & .topFunctionColor .ant-switch-handle {\n    top: 1px;\n    left: 1px;\n    width: var(--switch-thumb);\n    height: var(--switch-thumb);\n  }\n  & .topFunctionColor .ant-switch-handle::before {\n    box-shadow: none !important;\n    border-radius: 50%;\n  }\n  & .topFunctionColor .ant-switch-checked .ant-switch-handle {\n    left: calc(var(--switch-width) - var(--switch-thumb) - 3px);\n  }\n  & .ant-switch-checked {\n    background: var(--primary) !important;\n  }\n  & .ant-switch-checked .ant-switch-handle::before {\n    background: var(--primary-foreground);\n  }\n}\n\n@media (pointer: coarse) {\n  html.bit-optimized-ui .bit-theme-button {\n    width: 44px;\n    height: 44px;\n    top: 14px;\n    right: 14px;\n  }\n}\n";
+	//#endregion
+	//#region src/styles/login.css?raw
+	var login_default = "html.bit-optimized-ui {\n  & #contentContainer .ant-tabs-nav::before {\n    border-color: var(--border) !important;\n  }\n  & #contentContainer .ant-tabs-tab-active .ant-tabs-tab-btn {\n    color: var(--foreground) !important;\n  }\n  & .ant-tabs {\n    overflow: visible !important;\n  }\n  & .ant-tabs-content {\n    margin: 0 !important;\n    display: block !important;\n    transform: none !important;\n    transition: none !important;\n    min-height: 216px;\n  }\n  & .ant-tabs-content:has(.ant-tabs-tabpane-active .scanBox) {\n    min-height: 0;\n  }\n  & .ant-tabs-nav {\n    min-height: 40px;\n    margin-bottom: 16px !important;\n  }\n  & .ant-tabs-nav-wrap {\n    overflow: visible !important;\n  }\n  & .ant-tabs-nav-wrap::before,\n  & .ant-tabs-nav-wrap::after,\n  & .ant-tabs-nav-operations,\n  & .ant-tabs-ink-bar {\n    display: none !important;\n  }\n  & .ant-tabs-nav-list {\n    width: 100%;\n    transform: none !important;\n    display: flex;\n    flex-wrap: wrap;\n    justify-content: space-between;\n    gap: 4px 8px;\n  }\n  & #contentContainer .ant-tabs-tab {\n    color: var(--muted-foreground);\n    font-size: 13px !important;\n    font-weight: normal !important;\n    margin: 0 !important;\n    padding: 10px 0 0;\n    border-bottom: 2px solid transparent;\n  }\n  & #contentContainer .ant-tabs-tab-active {\n    border-bottom-color: var(--foreground);\n  }\n  & .auth-tab-title-text {\n    font-size: inherit !important;\n  }\n  & .ant-tabs-tab-btn {\n    font-size: inherit !important;\n    font-weight: 400 !important;\n    line-height: 20px !important;\n  }\n  & .ant-tabs-tabpane {\n    transition: none !important;\n  }\n  & .ant-tabs-tabpane:not(.ant-tabs-tabpane-active) {\n    display: none !important;\n  }\n  & :is(#normalLoginForm, #smsLoginForm, #mailLoginForm, #webauthnLoginForm) {\n    display: flex;\n    flex-direction: column;\n    gap: var(--field-gap);\n  }\n  & .login-normal-item {\n    height: auto !important;\n    min-height: 0;\n    margin: 0 !important;\n    padding-block: 0 !important;\n  }\n  & .login-normal-button {\n    order: 2;\n    margin: 4px 0 0 !important;\n  }\n  & .ant-tabs-content-holder {\n    position: relative;\n    min-height: 216px;\n  }\n  & .ant-tabs-tabpane-active .scanBox {\n    margin-top: 0;\n  }\n  & .ant-tabs-content-holder:has(.scanBox) .ant-tabs-tabpane-active:has(.scanBox) {\n    transform: translateY(-8px);\n  }\n  & #contentContainer .ant-tabs-content-holder .topFunctionColor {\n    position: static !important;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    gap: 8px;\n    margin: 8px 0 0 !important;\n    min-height: 20px;\n    height: auto;\n    border: 0;\n    background: transparent;\n    padding: 0;\n  }\n  & #contentContainer .ant-tabs-tabpane-active form > .topFunctionColor {\n    order: 1;\n    justify-content: flex-start;\n    margin: 0 !important;\n  }\n  & #contentContainer .item-input-group:has(app-sms-code) {\n    padding-right: 5px;\n  }\n  & #contentContainer .item-input-group:has(app-sms-code) .ant-input-suffix {\n    align-items: center;\n    margin-left: 8px;\n  }\n  & #contentContainer app-sms-code,\n  & #contentContainer app-sms-code .input-decorator-icon {\n    display: flex;\n    align-items: center;\n    height: 28px;\n    margin: 0;\n    line-height: 1;\n  }\n  & #contentContainer app-sms-code :is(.font-class-text-button, .wait-send-again-text) {\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    height: auto;\n    padding: 2px 8px;\n    line-height: 18px;\n    box-sizing: border-box;\n    border: 1px solid var(--border);\n    border-radius: calc(var(--radius) - 4px);\n    background: var(--muted);\n    color: var(--foreground) !important;\n    font-size: 12px;\n    text-decoration: none !important;\n    white-space: nowrap;\n    transition:\n      background-color 150ms,\n      color 150ms,\n      border-color 150ms;\n  }\n  & #contentContainer app-sms-code .wait-send-again-text {\n    color: var(--muted-foreground) !important;\n    font-size: 12px !important;\n    font-weight: 400 !important;\n    font-variant-numeric: tabular-nums;\n    cursor: default;\n  }\n  & #smsLoginForm .login-normal-action {\n    position: static;\n    order: 3;\n    width: 100%;\n    margin: 0 !important;\n    line-height: 20px;\n  }\n  & #smsLoginForm .login-normal-describe {\n    display: flex;\n    flex-wrap: wrap;\n    justify-content: flex-end;\n    gap: 4px 8px;\n  }\n  & #smsLoginForm .tips {\n    flex: 1 1 100%;\n    white-space: normal;\n    overflow-wrap: anywhere;\n  }\n  & #smsLoginForm .tips :is(label, span) {\n    color: var(--muted-foreground) !important;\n    font-size: 12px !important;\n    font-weight: 400 !important;\n    line-height: 20px;\n  }\n  & #smsLoginForm .verification-code-error-color {\n    font-size: 12px !important;\n    font-weight: 400 !important;\n  }\n  & #contentContainer app-sms-code .font-class-text-button:hover {\n    text-decoration: none !important;\n    background: color-mix(in oklch, var(--foreground) 12%, var(--card));\n  }\n  & #contentContainer .item-input-group {\n    min-height: var(--control-height);\n    height: var(--control-height) !important;\n    box-sizing: border-box;\n    padding: 3px 12px;\n    align-items: center;\n    border: 1px solid var(--input) !important;\n    border-radius: calc(var(--radius) - 2px) !important;\n    background: var(--field-background) !important;\n    box-shadow: var(--field-shadow);\n  }\n  & #contentContainer .item-input-group:focus-within {\n    border-color: var(--muted-foreground) !important;\n    box-shadow: var(--field-focus-shadow);\n  }\n  & #contentContainer .login-button:hover {\n    background: color-mix(in oklch, var(--primary) 90%, transparent) !important;\n  }\n  & .bit-bottom-links {\n    position: absolute;\n    bottom: 8px;\n    left: 64px;\n    right: 64px;\n    z-index: 1;\n    min-height: 32px;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    gap: 4px 8px;\n    font-size: 12px;\n    line-height: 1.5;\n    text-align: center;\n  }\n  & .bit-bottom-links .login-panel-box {\n    position: static !important;\n    width: auto !important;\n    margin: 0 !important;\n    padding: 0 !important;\n    display: flex;\n    flex-wrap: wrap;\n    align-items: center;\n    justify-content: center;\n    gap: 4px 8px;\n  }\n  & #contentContainer :is(.bit-bottom-links, .bit-login-footer) :is(a, span, button) {\n    font-size: 12px !important;\n    font-weight: 400;\n  }\n  & :is(.bit-bottom-links, .bit-login-footer) > [hidden] {\n    display: none !important;\n  }\n  & .bit-login-options {\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    flex-wrap: wrap;\n    gap: 8px 12px;\n    order: 1;\n    min-width: 0;\n  }\n  & .ant-tabs-content-holder:has(.ant-tabs-tabpane-active .scanBox) > .bit-login-options {\n    justify-content: center;\n  }\n  & .bit-login-footer:not(:has(> :not([hidden]))) {\n    display: none;\n  }\n  & #contentContainer .bit-login-options > .topFunctionColor {\n    margin: 0 !important;\n    flex: 0 0 auto;\n  }\n  & .bit-login-footer {\n    display: flex;\n    align-items: center;\n    justify-content: flex-end;\n    flex-wrap: wrap;\n    gap: 4px 12px;\n    flex: 1;\n    min-width: 0;\n    font-size: 12px;\n    line-height: 1.5;\n    text-align: right;\n  }\n  & .bit-login-footer :is(.login-panel-box, .last-action, .passkey-use) {\n    position: static !important;\n    width: auto !important;\n    margin: 0 !important;\n    padding: 0 !important;\n    overflow-wrap: anywhere;\n  }\n  & .bit-login-footer .ant-btn-link {\n    height: auto;\n    padding: 0;\n    border: 0;\n  }\n  /* Ant buttons wrap their text in an inline-block, which blocks decoration propagation. */\n  & .bit-login-footer .ant-btn-link > span {\n    text-decoration: inherit;\n  }\n  & #contentContainer .eyes-icon {\n    position: absolute !important;\n    right: 6px !important;\n    top: 50% !important;\n    transform: translateY(-50%);\n    width: 20px;\n    height: 20px;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    cursor: pointer;\n  }\n  & #contentContainer .eyes-icon :is(i, svg) {\n    color: var(--muted-foreground) !important;\n    display: block;\n    line-height: 1;\n  }\n  & #contentContainer .eyes-icon:hover :is(i, svg) {\n    color: var(--foreground) !important;\n  }\n  & #contentContainer .passwordInput input.ant-input {\n    padding-right: 28px !important;\n  }\n  & .login-notice-list {\n    flex-wrap: nowrap !important;\n    white-space: nowrap;\n    margin: 0 !important;\n    padding: 0 !important;\n  }\n  & #contentContainer .ant-input-prefix {\n    flex: 0 0 14px;\n    width: 14px;\n    margin-right: 8px;\n  }\n  & #contentContainer .ant-input-prefix ion-icon {\n    width: 14px;\n    height: 14px;\n    font-size: 14px;\n  }\n  & #contentContainer .ant-input {\n    font: var(--login-input-font) !important;\n    background: transparent !important;\n    height: 28px !important;\n    line-height: 28px !important;\n    padding: 0 !important;\n    min-width: 0;\n    color: var(--foreground) !important;\n    caret-color: var(--foreground);\n    box-shadow: none !important;\n  }\n  & #contentContainer .ant-input:is(:autofill, :-webkit-autofill) {\n    -webkit-text-fill-color: var(--foreground) !important;\n    caret-color: var(--foreground);\n  }\n  & #contentContainer .ant-input::placeholder {\n    color: var(--muted-foreground) !important;\n  }\n  & #contentContainer .login-button {\n    height: var(--control-height);\n    border-radius: calc(var(--radius) - 2px) !important;\n    background: var(--primary) !important;\n    border: 0 !important;\n    color: var(--primary-foreground) !important;\n    font-size: 14px;\n    font-weight: 500;\n    box-shadow: none !important;\n  }\n  & #contentContainer .login-button ion-icon {\n    color: var(--primary-foreground) !important;\n  }\n  & #contentContainer .login-button.disabled,\n  & #contentContainer .login-button:disabled {\n    opacity: 0.5;\n    cursor: not-allowed;\n  }\n  & #contentContainer rg-copyright {\n    position: static !important;\n    order: 2;\n    width: auto;\n    max-width: 100%;\n  }\n  & #contentContainer .phone-copyright {\n    position: static !important;\n    color: var(--muted-foreground) !important;\n    text-align: center;\n    line-height: 1.8;\n    padding: 0 !important;\n  }\n  & #contentContainer :is(a, .forgetPassword, .light-app) {\n    color: var(--muted-foreground) !important;\n    text-decoration: none !important;\n    text-underline-offset: 4px;\n    transition: color 150ms;\n    cursor: pointer;\n  }\n  & #contentContainer :is(a, .forgetPassword, .light-app):hover {\n    color: var(--foreground) !important;\n    text-decoration: underline !important;\n  }\n  & #contentContainer :is(button, a, .ant-tabs-tab-btn):focus-visible {\n    outline: 2px solid var(--foreground);\n    outline-offset: 3px;\n  }\n  @media (pointer: coarse) {\n    & #contentContainer .topFunctionColor {\n      min-height: 44px;\n    }\n    & #contentContainer .eyes-icon {\n      width: 40px;\n      height: 40px;\n    }\n    & #contentContainer .passwordInput input.ant-input {\n      padding-right: 40px !important;\n    }\n    & #contentContainer .ant-tabs-tab {\n      min-height: 44px;\n      box-sizing: border-box;\n    }\n  }\n  @media (max-height: 600px) {\n    & #contentContainer {\n      justify-content: flex-start;\n    }\n  }\n  @media (prefers-reduced-motion: reduce) {\n    & .login-content-left {\n      transition: none;\n    }\n  }\n  @media (max-width: 480px) {\n    & #contentContainer {\n      padding: max(24px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))\n        max(24px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));\n      justify-content: flex-start;\n    }\n    & #login-content-right {\n      padding: 20px 20px 64px !important;\n    }\n    & .ant-tabs-nav-list {\n      display: grid;\n      grid-template-columns: repeat(3, minmax(0, 1fr));\n    }\n    & #contentContainer .ant-tabs-tab {\n      justify-content: center;\n    }\n    & #contentContainer .phone-copyright {\n      white-space: normal;\n      font-size: 11px;\n    }\n  }\n}\n";
+	//#endregion
+	//#region src/styles/settings.css?raw
+	var settings_default = ":host([data-modern]) #sso-tip {\n  margin-bottom: 0;\n}\n:host([data-modern]) .sso-info:not(.error):not(.success) {\n  background: var(--card);\n  border-color: var(--input);\n  color: var(--foreground);\n  border-radius: 8px;\n}\n:host([data-modern]) .sso-info {\n  height: var(--control-height);\n  border-radius: calc(var(--radius) - 2px);\n}\n:host([data-modern]) .sso-info.clickable:hover {\n  background: var(--muted);\n}\n:host([data-modern]) .sso-title {\n  color: var(--foreground);\n}\n:host([data-modern]) :is(.sso-label, .sso-checkbox-text) {\n  color: var(--muted-foreground);\n}\n:host([data-modern]) .sso-checkbox-text {\n  font: var(--switch-label-font);\n}\n:host([data-modern]) .sso-btn-primary {\n  background: var(--primary);\n  color: var(--primary-foreground);\n  border-radius: calc(var(--radius) - 2px);\n  font-weight: 500;\n}\n:host([data-modern]) .sso-btn-primary:hover {\n  background: color-mix(in oklch, var(--primary) 90%, transparent);\n}\n:host([data-modern]) #sso-tip .sso-settings {\n  display: none;\n}\n@keyframes sso-reveal {\n  from {\n    clip-path: inset(calc(100% - 32px) 0 0 calc(100% - 48px) round 6px);\n  }\n  to {\n    clip-path: inset(0 round 4px);\n  }\n}\n:host(.inline-settings) .sso-overlay {\n  position: absolute;\n  background: var(--muted);\n  border-radius: 4px;\n  animation: sso-reveal 200ms ease both;\n  display: block;\n  overflow-y: auto;\n  overscroll-behavior: contain;\n}\n@keyframes sso-conceal {\n  from {\n    clip-path: inset(0 round 4px);\n  }\n  to {\n    clip-path: inset(calc(100% - 32px) 0 0 calc(100% - 48px) round 6px);\n  }\n}\n:host(.inline-settings) .sso-overlay.closing {\n  animation: sso-conceal 200ms ease forwards;\n}\n:host(.inline-settings) .sso-overlay.closing .sso-dialog {\n  animation: none;\n}\n:host(.inline-settings) .sso-dialog {\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));\n  grid-template-rows: repeat(5, auto) minmax(32px, 1fr);\n  align-content: start;\n  gap: var(--field-gap);\n  width: 100%;\n  min-height: 100%;\n  max-width: none;\n  --settings-padding: 24px;\n  padding: 24px var(--settings-padding) var(--footer-gap);\n  max-height: none;\n  overflow: visible;\n  background: var(--muted);\n  border: 0;\n  border-radius: 0;\n  box-shadow: none;\n  animation: none;\n}\n:host(.inline-settings) .sso-title {\n  text-align: left;\n  font-size: 16px;\n  line-height: 1.5;\n}\n:host(.inline-settings) .sso-heading {\n  grid-column: 1 / -1;\n  margin-bottom: 8px;\n}\n:host(.inline-settings) .sso-heading .sso-modern-toggle {\n  flex-wrap: nowrap;\n  flex: 0 0 auto;\n  gap: 6px;\n}\n:host(.inline-settings) .sso-heading .sso-checkbox-text {\n  font-size: 12px;\n}\n:host(.inline-settings) .sso-field {\n  grid-column: 1 / -1;\n  position: relative;\n  min-width: 0;\n  margin: 0;\n}\n:host(.inline-settings) .sso-label {\n  position: absolute;\n  clip-path: inset(100%);\n}\n.sso-field ion-icon {\n  display: none;\n}\n:host(.inline-settings) .sso-field ion-icon {\n  display: block;\n  position: absolute;\n  left: 13px;\n  top: 50%;\n  transform: translateY(-50%);\n  width: 14px;\n  height: 14px;\n  color: var(--foreground);\n  pointer-events: none;\n}\n:host(.inline-settings) .sso-input {\n  color: var(--foreground);\n  font: var(--login-input-font);\n  height: var(--control-height);\n  padding: 3px 12px 3px 34px;\n  border-radius: calc(var(--radius) - 2px);\n  background: var(--field-background);\n  border-color: var(--input);\n  box-shadow: var(--field-shadow);\n}\n:host([data-modern]) .sso-input:is(:autofill, :-webkit-autofill) {\n  -webkit-text-fill-color: var(--foreground) !important;\n  caret-color: var(--foreground);\n}\n:host(.inline-settings) .sso-input::placeholder {\n  color: var(--muted-foreground);\n  opacity: 1;\n}\n:host(.inline-settings) .sso-input:focus {\n  outline: none;\n  border-color: var(--muted-foreground);\n  box-shadow: var(--field-focus-shadow);\n}\n:host(.inline-settings) .sso-checkbox-label {\n  flex-wrap: wrap;\n  min-width: 0;\n  min-height: var(--footer-height);\n  margin: 0;\n}\n:host(.inline-settings) .sso-actions {\n  grid-column: 1 / -1;\n  display: grid;\n  grid-template-columns: 1fr;\n  margin-top: 4px;\n}\n:host(.inline-settings) .sso-btn {\n  min-height: var(--control-height);\n}\n:host(.inline-settings) .sso-footnote {\n  grid-column: 1 / -1;\n  min-height: var(--footer-height);\n  margin: 12px calc(-1 * var(--settings-padding)) 0;\n  grid-template-columns: var(--footer-width) minmax(0, 1fr) var(--footer-width);\n  gap: 0;\n  align-self: end;\n}\n:host(.inline-settings) .sso-footnote .sso-btn-reset {\n  min-height: var(--footer-height);\n  width: var(--footer-width);\n  transform: translateX(var(--footer-gap));\n  justify-self: stretch;\n  text-align: center;\n}\n:host(.inline-settings) a {\n  color: var(--muted-foreground);\n  text-decoration: none;\n  text-underline-offset: 4px;\n}\n:host(.inline-settings) a:hover {\n  color: var(--foreground);\n  text-decoration: underline;\n}\n:host .sso-footnote .sso-btn-reset {\n  height: auto;\n  padding: 0;\n  border: 0;\n  background: transparent;\n  color: #ef4444;\n  font-size: 12px;\n}\n.sso-footnote .sso-btn-reset:hover {\n  text-decoration: underline;\n  text-underline-offset: 4px;\n}\n@media (prefers-reduced-motion: reduce) {\n  :host(.inline-settings) .sso-overlay {\n    animation-duration: 1ms;\n  }\n}\n\n@media (max-width: 480px) {\n  :host(.inline-settings) .sso-title {\n    font-size: 14px;\n  }\n  :host(.inline-settings) .sso-dialog {\n    --settings-padding: 16px;\n  }\n  :host(.inline-settings) .sso-footnote {\n    font-size: 10px;\n  }\n}\n";
+	//#endregion
+	//#region src/styles/helper.css?raw
+	var helper_default = "/* Shadow roots also need explicit form-control font inheritance. */\n:host {\n  font-family: var(--font-ui);\n  font-size: 14px;\n  line-height: 1.5;\n}\nbutton,\ninput {\n  font-family: inherit;\n}\nbutton:focus-visible,\na:focus-visible {\n  outline: 2px solid var(--foreground, #333);\n  outline-offset: 3px;\n}\n@keyframes sso-spin {\n  from {\n    transform: rotate(0deg);\n  }\n  to {\n    transform: rotate(360deg);\n  }\n}\n@keyframes sso-fade-in {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n@keyframes sso-fade-out {\n  from {\n    opacity: 1;\n  }\n  to {\n    opacity: 0;\n  }\n}\n@keyframes sso-scale-in {\n  from {\n    opacity: 0;\n    transform: scale(0.9);\n  }\n  to {\n    opacity: 1;\n    transform: scale(1);\n  }\n}\n@keyframes sso-scale-out {\n  from {\n    opacity: 1;\n    transform: scale(1);\n  }\n  to {\n    opacity: 0;\n    transform: scale(0.9);\n  }\n}\n\n#sso-tip {\n  display: flex;\n  width: 100%;\n  gap: 10px;\n  margin-bottom: 32px;\n  font-size: 14px;\n  line-height: 1.5;\n  font-family: inherit;\n  user-select: none;\n}\n.sso-info,\n.sso-settings {\n  box-sizing: border-box;\n  height: 36px;\n  font: inherit;\n  padding: 0 15px;\n  border-radius: 4px;\n  background: #fff;\n  border: 1px solid #fff;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  color: #000;\n  transition: background 0.2s ease;\n}\n.sso-info {\n  flex: 1;\n  gap: 8px;\n}\n.sso-info.clickable,\n.sso-settings {\n  cursor: pointer;\n}\n.sso-info.clickable:hover,\n.sso-settings:hover {\n  background: rgba(255, 255, 255, 0.9);\n}\n.sso-info.success {\n  --status-color: rgba(76, 175, 80, 0.9);\n}\n.sso-info.error {\n  --status-color: rgba(255, 77, 79, 0.9);\n}\n.sso-info.success,\n.sso-info.error {\n  background: var(--status-color);\n  border-color: var(--status-color);\n  color: #fff;\n}\n.sso-info.disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n.sso-spinner {\n  width: 14px;\n  height: 14px;\n  animation: sso-spin 1s linear infinite;\n}\n.sso-info:not(.loading) :is(.sso-spinner, .sso-cancel) {\n  display: none;\n}\n.sso-cancel {\n  margin-left: auto;\n  opacity: 0.7;\n  font-size: 12px;\n}\n\n.sso-overlay {\n  position: fixed;\n  inset: 0;\n  background: rgba(0, 0, 0, 0.3);\n  z-index: 999999;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  animation: sso-fade-in 0.2s ease;\n}\n.sso-overlay.closing {\n  animation: sso-fade-out 0.15s ease forwards;\n}\n.sso-dialog {\n  background: #fff;\n  padding: 32px 32px 18px;\n  border-radius: 12px;\n  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);\n  width: 400px;\n  max-width: 90vw;\n  max-height: calc(100dvh - 32px);\n  overflow-y: auto;\n  box-sizing: border-box;\n  user-select: none;\n  animation: sso-scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);\n}\n.sso-overlay.closing .sso-dialog {\n  animation: sso-scale-out 0.15s ease forwards;\n}\n.sso-dialog:focus {\n  outline: none;\n}\n.sso-title {\n  margin: 0;\n  white-space: nowrap;\n  color: #333;\n  font-size: 20px;\n}\n.sso-field {\n  margin-bottom: 15px;\n}\n.sso-label {\n  display: block;\n  margin-bottom: 5px;\n  color: #666;\n  font-size: 14px;\n}\n.sso-input {\n  width: 100%;\n  padding: 10px;\n  border: 1px solid #ddd;\n  border-radius: 6px;\n  box-sizing: border-box;\n  font-size: 14px;\n}\n.sso-checkbox-label {\n  display: flex;\n  gap: 8px;\n  align-items: center;\n  cursor: pointer;\n  margin-bottom: 20px;\n}\n.sso-checkbox {\n  margin: 0;\n  appearance: none;\n  position: relative;\n  flex: 0 0 var(--switch-width);\n  width: var(--switch-width) !important;\n  height: var(--switch-height) !important;\n  border: 1px solid transparent;\n  border-radius: 999px;\n  background: var(--input, #ddd);\n  transition: background 150ms;\n  cursor: pointer;\n}\n.sso-checkbox::before {\n  content: '';\n  position: absolute;\n  top: 1px;\n  left: 1px;\n  width: var(--switch-thumb);\n  height: var(--switch-thumb);\n  border-radius: 50%;\n  background: #fff;\n  transition: transform 150ms;\n}\n.sso-checkbox:checked {\n  background: var(--primary, #171717);\n}\n.sso-checkbox:checked::before {\n  transform: translateX(calc(var(--switch-width) - var(--switch-thumb) - 4px));\n  background: var(--primary-foreground, #fff);\n}\n.sso-checkbox:focus-visible {\n  outline: 2px solid var(--muted-foreground, #999);\n  outline-offset: 2px;\n}\n.sso-checkbox-text {\n  color: #666;\n  font-size: 14px;\n}\n.sso-actions {\n  display: flex;\n  gap: 10px;\n  justify-content: space-between;\n}\n.sso-btn {\n  padding: 6px 18px;\n  border-radius: 6px;\n  cursor: pointer;\n  font-size: 14px;\n  transition: background 0.2s ease;\n}\n.sso-btn-primary {\n  border: none;\n  background: #2196f3;\n  color: #fff;\n}\n.sso-btn-primary:hover {\n  background: #1976d2;\n}\n.sso-btn-primary:active {\n  background: #1565c0;\n}\n.sso-footnote {\n  color: #999;\n  font-size: 12px;\n  display: grid;\n  grid-template-columns: 40px minmax(0, 1fr) 40px;\n  align-items: center;\n  gap: 4px;\n  margin-top: 24px;\n  line-height: 1.4;\n}\n\n@media (max-width: 480px), (pointer: coarse) {\n  #sso-tip :is(.sso-info, .sso-settings) {\n    min-height: 44px;\n  }\n  .sso-input {\n    font-size: 16px;\n    min-height: 44px;\n  }\n  .sso-btn,\n  .sso-checkbox-label {\n    min-height: 44px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .sso-overlay,\n  .sso-overlay.closing,\n  .sso-dialog,\n  .sso-overlay.closing .sso-dialog {\n    animation-duration: 1ms;\n  }\n}\n\n.sso-heading {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n  margin-bottom: 20px;\n}\n.sso-heading .sso-modern-toggle {\n  margin: 0;\n  flex-shrink: 0;\n}\n.sso-heading .sso-checkbox-text {\n  font-size: 12px;\n}\n\n.sso-footnote .sso-btn-reset {\n  justify-self: start;\n}\n.sso-credit {\n  grid-column: 2;\n  min-width: 0;\n  text-align: center;\n  text-wrap: balance;\n}\n";
+	//#endregion
+	//#region src/styles/index.js
+	var themeStyles = [
+		shared_default,
+		tokens_default,
+		page_default,
+		controls_default,
+		login_default,
+		"html.bit-optimized-ui {\n  & .cdk-overlay-pane:has(rg-captcha-code-web-dialog) {\n    width: 350px !important;\n    max-width: calc(100vw - 32px) !important;\n  }\n  & .mat-dialog-container:has(rg-captcha-code-web-dialog) {\n    padding: 24px;\n    max-height: calc(100dvh - 32px);\n    border: 1px solid var(--border);\n    border-radius: 12px;\n    background: var(--card);\n    color: var(--foreground);\n    box-shadow: 0 16px 48px #0003;\n    font-family: var(--font-ui);\n  }\n  & rg-captcha-code-web-dialog {\n    display: block;\n    font: 400 14px/1.5 var(--font-ui);\n    & .dialog-title {\n      margin: 0 0 20px;\n      color: var(--foreground);\n      font: 600 18px/1.5 var(--font-ui);\n    }\n    & .mat-dialog-content {\n      margin: 0;\n      padding: 0;\n      max-height: none;\n      overflow: visible;\n    }\n    & .captcha-row {\n      margin: 0;\n      gap: 12px;\n    }\n    & .captcha-refresh a {\n      color: var(--muted-foreground) !important;\n      font: inherit !important;\n      text-underline-offset: 4px;\n    }\n    & .captcha-refresh a:hover {\n      color: var(--foreground) !important;\n      text-decoration: underline;\n    }\n    & .captcha-input {\n      height: var(--control-height) !important;\n      padding: 0 12px !important;\n      border: 1px solid var(--input) !important;\n      border-radius: 8px !important;\n      background: var(--field-background) !important;\n      color: var(--foreground) !important;\n      font: var(--login-input-font) !important;\n      box-shadow: var(--field-shadow);\n    }\n    & .captcha-input::placeholder {\n      color: var(--muted-foreground);\n      opacity: 1;\n    }\n    & .captcha-input:focus {\n      border-color: var(--muted-foreground) !important;\n      box-shadow: var(--field-focus-shadow);\n    }\n    & .dialog-actions {\n      gap: 8px;\n      padding: 0;\n      margin: 20px 0 0;\n      min-height: 0;\n    }\n    & .dialog-actions .btn {\n      margin: 0 !important;\n      height: var(--control-height) !important;\n      border: 1px solid var(--input) !important;\n      border-radius: 8px !important;\n      background: transparent !important;\n      color: var(--foreground) !important;\n      font: 500 14px/1.5 var(--font-ui) !important;\n    }\n    & .dialog-actions .btn:hover {\n      background: var(--muted) !important;\n    }\n    & .dialog-actions .btn-confirm {\n      border: 0 !important;\n      background: var(--primary) !important;\n      color: var(--primary-foreground) !important;\n    }\n    & .dialog-actions .btn-confirm:hover {\n      background: color-mix(in oklch, var(--primary) 90%, transparent) !important;\n    }\n    & :is(button, a):focus-visible {\n      outline: 2px solid var(--foreground);\n      outline-offset: 3px;\n    }\n  }\n}\n"
+	].join("\n");
+	var helperStyles = [
+		shared_default,
+		settings_default,
+		helper_default
+	].join("\n");
+	//#endregion
 	//#region src/theme.js
-	var STYLE_ID = "bit-optimized-ui";
-	var CSS = `
-  /* Neutral tokens and spacing from shadcn/ui new-york-v4, login-03. */
-  html.bit-optimized-ui { color-scheme: light;
-    --switch-label-font: 400 14px/20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --login-input-font: 500 14px/28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --background: oklch(1 0 0); --foreground: oklch(.145 0 0);
-    --card: oklch(1 0 0); --muted: oklch(.97 0 0); --muted-foreground: oklch(.556 0 0);
-    --border: oklch(.922 0 0); --primary: oklch(.205 0 0); --primary-foreground: oklch(.985 0 0);
-    --field-background: transparent; --input: oklch(.922 0 0); --radius: .625rem; background: var(--muted); }
-  html.bit-optimized-ui[data-bit-theme="dark"] { color-scheme: dark;
-    --background: oklch(.145 0 0); --foreground: oklch(.985 0 0);
-    --card: oklch(.205 0 0); --muted: oklch(.269 0 0); --muted-foreground: oklch(.708 0 0);
-    --border: oklch(1 0 0 / 10%); --primary: oklch(.922 0 0); --primary-foreground: oklch(.205 0 0);
-    --input: oklch(1 0 0 / 15%); --field-background: color-mix(in oklch, var(--input) 30%, transparent); }
-  html.bit-optimized-ui body { background: var(--muted) !important; color: var(--foreground);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  html.bit-optimized-ui #contentContainer { position: relative !important; min-height: 100svh;
-    height: auto !important; padding: 40px 32px; box-sizing: border-box;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 24px; background: var(--muted) !important; }
-  html.bit-optimized-ui .pc-background-none { background: var(--muted) !important; }
-  html.bit-optimized-ui .login-title { display: none; }
-  html.bit-optimized-ui .normal-title { display: none; }
-  html.bit-optimized-ui .wrap-normal-title { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
-  html.bit-optimized-ui .login-title-img { position: static !important; height: 40px !important; max-width: 100%; object-fit: contain; }
-  html.bit-optimized-ui .login-content { position: relative !important; inset: auto !important;
-    transform: none !important; display: block !important;
-    width: min(420px, 100%) !important; height: auto !important; min-height: 0 !important;
-    margin: 0 !important; padding: 0 !important; background-color: var(--card) !important; background-size: 0 0 !important;
-    border: 1px solid var(--border); border-radius: 12px !important; overflow: hidden;
-    box-shadow: 0 1px 3px #0001; backdrop-filter: none !important; }
-  html.bit-optimized-ui .login-content::before { display: none !important; }
-  html.bit-optimized-ui .bit-login-brand { position: relative; display: flex; align-items: center; justify-content: center; }
-  html.bit-optimized-ui .bit-brand-emblem { width: 40px; height: 40px; overflow: hidden; flex: 0 0 40px; }
-  html.bit-optimized-ui .bit-brand-emblem .login-title-img { width: auto !important; max-width: none !important; }
-  html.bit-optimized-ui .bit-login-brand { gap: 6px; color: var(--foreground); white-space: nowrap; }
-  html.bit-optimized-ui .bit-brand-name { font-size: 20px; font-weight: 500; }
-  html.bit-optimized-ui .bit-brand-subtitle { font-size: 12px; }
-  html.bit-optimized-ui .bit-login-header { width: 100%; text-align: center; margin-bottom: 8px; }
-  html.bit-optimized-ui .bit-login-header h1 { margin: 0 0 8px; font-size: 24px; line-height: 32px; font-weight: 600; color: var(--foreground) !important; }
-  html.bit-optimized-ui #bit-login-actions { display: flex; align-items: center; gap: 10px; margin: 24px 0; }
-  html.bit-optimized-ui #bit-login-actions > #bit-sso-helper { flex: 1; min-width: 0; }
-  html.bit-optimized-ui .bit-login-separator { display: flex; gap: 12px; align-items: center; color: var(--muted-foreground); font-size: 14px; }
-  html.bit-optimized-ui .bit-login-separator::before, html.bit-optimized-ui .bit-login-separator::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-  html.bit-optimized-ui .toogle-button { position: absolute; bottom: 16px; left: 16px; }
-  html.bit-optimized-ui .toggle-button-container { position: static !important; }
-  html.bit-optimized-ui .login-content-left { position: absolute !important; z-index: 20;
-    display: block !important; inset: 68px 8px 8px !important; width: auto !important; height: auto !important;
-    min-height: 0 !important; padding: 24px 24px 48px; overflow: hidden; box-sizing: border-box;
-    background: transparent !important; border-radius: 4px;
-    clip-path: inset(calc(100% - 32px) calc(100% - 48px) 0 0 round 6px);
-    transition: clip-path 200ms ease, background-color 150ms; pointer-events: none; }
-  html.bit-optimized-ui .login-content:has(.bit-notice-button:hover) .login-content-left,
-  html.bit-optimized-ui .login-content.bit-notice-open .login-content-left { background: var(--muted) !important; }
-  html.bit-optimized-ui .login-content.bit-notice-open .login-content-left { clip-path: inset(0 round 4px); pointer-events: auto; }
-  html.bit-optimized-ui .login-content-left .notice-content { width: 100% !important; min-width: 0 !important; max-width: 100% !important; height: 100%; overflow: auto; box-sizing: border-box; overflow-wrap: anywhere; color: var(--foreground) !important; background: transparent !important; padding: 0 !important; opacity: 0; transition: opacity 100ms; }
-  html.bit-optimized-ui .login-content.bit-notice-open .login-content-left .notice-content { opacity: 1; transition-delay: 80ms; }
-  html.bit-optimized-ui .login-content-left::after { display: none !important; }
-  html.bit-optimized-ui .notice-content-item { width: auto !important; min-width: 0 !important; padding: 0 !important; }
-  html.bit-optimized-ui .noticTitle { padding: 0 !important; margin: 0 0 24px !important; text-align: left; }
-  html.bit-optimized-ui .notice-content p { line-height: 1.8; margin-bottom: 12px; }
-  html.bit-optimized-ui .notice-content a { color: var(--foreground) !important; text-decoration: none; text-underline-offset: 3px; }
-  html.bit-optimized-ui #login-content-right { position: static !important;  float: none !important;
-    width: auto !important; min-width: 0 !important; min-height: 0 !important; padding: 20px 24px 64px !important;
-    background: var(--card) !important; box-sizing: border-box; align-self: stretch; display: flex; align-items: center; }
-  html.bit-optimized-ui .login-content-right-wrapper,
-  html.bit-optimized-ui #login-content-right-inner { width: 100% !important; }
-  html.bit-optimized-ui .normal-row { padding: 0 !important; }
-  html.bit-optimized-ui app-auth-panel-new > .ant-row { padding: 0 !important; }
-  html.bit-optimized-ui #contentContainer .topFunctionColor { position: static; transform: none; border: 0; padding: 0; background: transparent; color: var(--muted-foreground) !important; }
-  html.bit-optimized-ui .login-content-right-wrapper, html.bit-optimized-ui #login-content-right-inner { min-height: 0 !important; }
-
-  html.bit-optimized-ui #contentContainer .filterColor,
-  html.bit-optimized-ui #contentContainer .eyes-icon,
-  html.bit-optimized-ui #contentContainer ion-icon { color: var(--foreground) !important; }
-  html.bit-optimized-ui :is(.newNotice, .newHideNotice) { display: none !important; }
-  html.bit-optimized-ui .bit-notice-button,
-  html.bit-optimized-ui .bit-theme-button,
-  html.bit-optimized-ui #contentContainer .topFunctionColor { display: inline-flex; align-items: center; justify-content: center;
-    gap: 8px; height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius);
-    background: var(--background); color: var(--foreground) !important; font-family: inherit; font-size: 12px; box-shadow: none; line-height: 1; box-sizing: border-box; }
-  html.bit-optimized-ui .bit-notice-button,
-  html.bit-optimized-ui .bit-theme-button { position: absolute; z-index: 2; cursor: pointer; font-size: 12px; }
-  html.bit-optimized-ui .bit-notice-button { left: 8px; bottom: 8px; z-index: 30; width: 48px; height: 32px; padding: 0; background: transparent; border: 0; border-radius: 6px; transition: color 150ms, transform 200ms ease; }
-  html.bit-optimized-ui #contentContainer .bit-notice-button { color: var(--muted-foreground) !important; }
-  html.bit-optimized-ui #contentContainer .bit-notice-button:hover { color: var(--foreground) !important; }
-  html.bit-optimized-ui .bit-notice-button[aria-expanded="true"] { transform: translate(8px, -8px); }
-  html.bit-optimized-ui .bit-theme-button { position: absolute; top: 20px; left: 20px; z-index: 60; width: 32px; padding: 0; border: 0; background: transparent; }
-  html.bit-optimized-ui #contentContainer .topFunctionColor,
-  html.bit-optimized-ui #contentContainer .topFunctionColor * { user-select: none; cursor: pointer; box-shadow: none !important; }
-  html.bit-optimized-ui #contentContainer .topFunctionColor,
-  html.bit-optimized-ui #contentContainer .topFunctionColor > span { font: var(--switch-label-font) !important; color: var(--muted-foreground) !important; }
-  html.bit-optimized-ui .topFunctionColor .ant-switch-handle::before { box-shadow: none !important; }
-  html.bit-optimized-ui .topFunctionColor nz-switch { display: flex; align-items: center; }
-  html.bit-optimized-ui .topFunctionColor .ant-switch { margin: 0 !important; top: auto !important; box-shadow: none !important; vertical-align: middle; }
-  html.bit-optimized-ui .bit-notice-button[hidden] { display: none; }
-  html.bit-optimized-ui .bit-theme-button:hover { background: var(--muted); }
-  html.bit-optimized-ui .topFunctionColor .ant-switch:not(.ant-switch-checked) { background: var(--input) !important; }
-  html.bit-optimized-ui .topFunctionColor .ant-switch { width: 32px; min-width: 32px; height: 18px; border: 1px solid transparent; border-radius: 999px; }
-  html.bit-optimized-ui .topFunctionColor .ant-switch-handle { top: 1px; left: 1px; width: 14px; height: 14px; }
-  html.bit-optimized-ui .topFunctionColor .ant-switch-handle::before { border-radius: 50%; }
-  html.bit-optimized-ui .topFunctionColor .ant-switch-checked .ant-switch-handle { left: 15px; }
-  html.bit-optimized-ui .ant-switch-checked { background: var(--primary) !important; }
-  html.bit-optimized-ui .ant-switch-checked .ant-switch-handle::before { background: var(--primary-foreground); }
-  html.bit-optimized-ui #contentContainer .ant-tabs-nav::before { border-color: var(--border) !important; }
-  html.bit-optimized-ui #contentContainer .ant-tabs-tab { color: var(--muted-foreground); font-size: 13px !important; font-weight: normal !important; }
-  html.bit-optimized-ui #contentContainer .ant-tabs-tab-active .ant-tabs-tab-btn { color: var(--foreground) !important; }
-  html.bit-optimized-ui #contentContainer .ant-tabs-ink-bar { background: var(--foreground) !important; }
-  html.bit-optimized-ui .ant-tabs { overflow: visible !important; }
-  html.bit-optimized-ui .ant-tabs-content { margin: 0 !important; display: block !important; transform: none !important; transition: none !important; min-height: 216px; }
-  html.bit-optimized-ui .ant-tabs-content:has(.ant-tabs-tabpane-active .scanBox) { min-height: 0; }
-  html.bit-optimized-ui .ant-tabs-nav { min-height: 40px; margin-bottom: 16px !important; }
-  html.bit-optimized-ui .ant-tabs-nav-wrap { overflow: visible !important; }
-  html.bit-optimized-ui .ant-tabs-nav-wrap::before,
-  html.bit-optimized-ui .ant-tabs-nav-wrap::after,
-  html.bit-optimized-ui .ant-tabs-nav-operations,
-  html.bit-optimized-ui .ant-tabs-ink-bar { display: none !important; }
-  html.bit-optimized-ui .ant-tabs-nav-list { width: 100%; transform: none !important; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; }
-  html.bit-optimized-ui #contentContainer .ant-tabs-tab { margin: 0 !important; padding: 10px 0 0; border-bottom: 2px solid transparent; }
-  html.bit-optimized-ui #contentContainer .ant-tabs-tab-active { border-bottom-color: var(--foreground); }
-  html.bit-optimized-ui .auth-tab-title-text { font-size: inherit !important; }
-  html.bit-optimized-ui .ant-tabs-tab-btn { font-size: inherit !important; font-weight: 400 !important; line-height: 20px !important; }
-  html.bit-optimized-ui .ant-tabs-tabpane { transition: none !important; }
-  html.bit-optimized-ui .ant-tabs-tabpane:not(.ant-tabs-tabpane-active) { display: none !important; }
-  html.bit-optimized-ui :is(#normalLoginForm, #smsLoginForm, #mailLoginForm, #webauthnLoginForm) { display: grid; grid-template-rows: 36px 36px 20px 36px; gap: 16px; }
-  html.bit-optimized-ui .login-normal-item { margin: 0 !important; }
-  html.bit-optimized-ui .login-normal-button { grid-row: 4; margin: 0 !important; }
-  html.bit-optimized-ui .ant-tabs-content-holder { position: relative; min-height: 216px; }
-  html.bit-optimized-ui .ant-tabs-tabpane-active .scanBox { margin-top: 0; }
-  html.bit-optimized-ui .ant-tabs-content-holder:has(.scanBox) .ant-tabs-tabpane-active:has(.scanBox) { transform: translateY(-8px); }
-  html.bit-optimized-ui #contentContainer .ant-tabs-content-holder > .topFunctionColor { position: static; display: flex; justify-content: center; margin-top: 8px; height: 20px; border: 0; background: transparent; padding: 0; }
-  html.bit-optimized-ui #contentContainer .ant-tabs-content-holder:has(.ant-tabs-tabpane-active .item-input-group) > .topFunctionColor { position: absolute; top: 104px; left: 0; margin: 0; z-index: 1; }
-  html.bit-optimized-ui #contentContainer .item-input-group:has(app-sms-code) { padding-right: 5px; }
-  html.bit-optimized-ui #contentContainer .item-input-group:has(app-sms-code) .ant-input-suffix { align-items: center; margin-left: 8px; }
-  html.bit-optimized-ui #contentContainer app-sms-code,
-  html.bit-optimized-ui #contentContainer app-sms-code .input-decorator-icon { display: flex; align-items: center; height: 28px; margin: 0; line-height: 1; }
-  html.bit-optimized-ui #contentContainer app-sms-code :is(.font-class-text-button, .wait-send-again-text) { display: inline-flex; align-items: center; justify-content: center; height: auto; padding: 2px 8px; line-height: 18px; box-sizing: border-box; border: 1px solid var(--border); border-radius: calc(var(--radius) - 4px); background: var(--muted); color: var(--foreground) !important; font-size: 12px; text-decoration: none !important; white-space: nowrap; transition: background-color 150ms, color 150ms, border-color 150ms; }
-  html.bit-optimized-ui #contentContainer app-sms-code .wait-send-again-text { color: var(--muted-foreground) !important; font-size: 12px !important; font-weight: 400 !important; font-variant-numeric: tabular-nums; cursor: default; }
-  html.bit-optimized-ui #smsLoginForm .login-normal-action { position: static; grid-row: 5; width: 100%; margin: 0 !important; line-height: 20px; }
-  html.bit-optimized-ui #smsLoginForm .login-normal-describe { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 8px; }
-  html.bit-optimized-ui #smsLoginForm .tips { flex: 1 1 100%; white-space: normal; overflow-wrap: anywhere; }
-  html.bit-optimized-ui #smsLoginForm .tips :is(label, span) { color: var(--muted-foreground) !important; font-size: 12px !important; font-weight: 400 !important; line-height: 20px; }
-  html.bit-optimized-ui #smsLoginForm .verification-code-error-color { font-size: 12px !important; font-weight: 400 !important; }
-  html.bit-optimized-ui #contentContainer app-sms-code .font-class-text-button:hover { text-decoration: none !important; background: color-mix(in oklch, var(--foreground) 12%, var(--card)); }
-  html.bit-optimized-ui #contentContainer .item-input-group { min-height: 36px; height: 36px !important; box-sizing: border-box;
-    padding: 3px 12px; align-items: center; border: 1px solid var(--input) !important; border-radius: calc(var(--radius) - 2px) !important;
-    background: var(--field-background) !important; box-shadow: 0 1px 2px #0001; }
-  html.bit-optimized-ui #contentContainer .item-input-group:focus-within {
-    border-color: var(--muted-foreground) !important; box-shadow: 0 0 0 3px color-mix(in oklch, var(--muted-foreground) 50%, transparent); }
-  html.bit-optimized-ui #contentContainer .login-button:hover { background: color-mix(in oklch, var(--primary) 90%, transparent) !important; }
-  html.bit-optimized-ui .bit-login-footer { position: absolute; bottom: 8px; left: 20px; right: 20px; height: 32px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; font-size: 12px; }
-  html.bit-optimized-ui .bit-login-footer :is(.login-panel-box, .last-action, .passkey-use) { position: static !important; width: auto !important; margin: 0 !important; padding: 0 !important; }
-  html.bit-optimized-ui .bit-login-footer .login-panel-box { grid-column: 2; grid-row: 1; }
-  html.bit-optimized-ui .bit-login-footer :is(.last-action, .passkey-use) { grid-column: 3; grid-row: 1; justify-self: end; white-space: nowrap; }
-  html.bit-optimized-ui .bit-login-footer .ant-btn-link { height: auto; padding: 0; border: 0; }
-  html.bit-optimized-ui .bit-login-footer > [hidden] { display: none !important; }
-  html.bit-optimized-ui #contentContainer .bit-login-footer :is(span, a, button) { font-size: 12px !important; font-weight: 400; }
-  html.bit-optimized-ui #contentContainer .eyes-icon { position: absolute !important; right: 6px !important; top: 50% !important; transform: translateY(-50%); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-  html.bit-optimized-ui #contentContainer .eyes-icon :is(i, svg) { color: var(--muted-foreground) !important; display: block; line-height: 1; }
-  html.bit-optimized-ui #contentContainer .eyes-icon:hover :is(i, svg) { color: var(--foreground) !important; }
-  html.bit-optimized-ui #contentContainer .passwordInput input.ant-input { padding-right: 28px !important; }
-  html.bit-optimized-ui .login-notice-list { flex-wrap: nowrap !important; white-space: nowrap; margin: 0 !important; padding: 0 !important; }
-  html.bit-optimized-ui #contentContainer .ant-input-prefix { flex: 0 0 14px; width: 14px; margin-right: 8px; }
-  html.bit-optimized-ui #contentContainer .ant-input-prefix ion-icon { width: 14px; height: 14px; font-size: 14px; }
-  html.bit-optimized-ui #contentContainer .ant-input { font: var(--login-input-font) !important; background: transparent !important;
-    height: 28px !important; line-height: 28px !important; padding: 0 !important; font-size: 14px !important; color: var(--foreground) !important; caret-color: var(--foreground); box-shadow: none !important; }
-  html.bit-optimized-ui #contentContainer .ant-input:is(:autofill, :-webkit-autofill) { -webkit-text-fill-color: var(--foreground) !important; caret-color: var(--foreground); }
-  html.bit-optimized-ui #contentContainer .ant-input::placeholder { color: var(--muted-foreground) !important; }
-  html.bit-optimized-ui #contentContainer .login-button { height: 36px; border-radius: calc(var(--radius) - 2px) !important;
-    background: var(--primary) !important; border: 0 !important; color: var(--primary-foreground) !important;
-    font-size: 14px; font-weight: 500; box-shadow: none !important; }
-  html.bit-optimized-ui #contentContainer .login-button.disabled,
-  html.bit-optimized-ui #contentContainer .login-button:disabled { opacity: .5; }
-  html.bit-optimized-ui #contentContainer rg-copyright { position: static !important; order: 2; width: auto; max-width: 100%; }
-  html.bit-optimized-ui #contentContainer .phone-copyright { position: static !important;
-    color: var(--muted-foreground) !important; text-align: center; line-height: 1.8; padding: 0 !important; }
-  html.bit-optimized-ui #contentContainer :is(a, .forgetPassword, .light-app) { color: var(--muted-foreground) !important; text-decoration: none !important; text-underline-offset: 4px; transition: color 150ms; cursor: pointer; }
-  html.bit-optimized-ui #contentContainer :is(a, .forgetPassword, .light-app):hover { color: var(--foreground) !important; text-decoration: underline !important; }
-  @media (prefers-reduced-motion: reduce) { html.bit-optimized-ui .login-content-left { transition: none; } }
-  @media (max-width: 480px) {
-    html.bit-optimized-ui #contentContainer { padding: 24px 12px; justify-content: flex-start; }
-    html.bit-optimized-ui #login-content-right { padding: 20px 20px 64px !important; }
-    html.bit-optimized-ui .ant-tabs-nav-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    html.bit-optimized-ui #contentContainer .ant-tabs-tab { justify-content: center; }
-    html.bit-optimized-ui .bit-login-footer { grid-template-columns: 1fr auto; left: 64px; right: 16px; gap: 4px; height: auto; min-height: 32px; }
-    html.bit-optimized-ui .bit-login-footer .login-panel-box { grid-column: 1; }
-    html.bit-optimized-ui .bit-login-footer :is(.last-action, .passkey-use) { grid-column: 2; white-space: normal; text-align: right; }
-    html.bit-optimized-ui #contentContainer .phone-copyright { white-space: normal; font-size: 11px; }
-  }
-`;
+	function createElement(tag, className, html = "") {
+		const element = document.createElement(tag);
+		element.className = className;
+		element.innerHTML = html;
+		if (tag === "button") element.type = "button";
+		return element;
+	}
 	var cleanup;
 	function setOptimizedUI(enabled) {
 		const active = enabled && !!loginRoute(location.href);
@@ -382,15 +281,13 @@
 		}
 		if (cleanup) return;
 		const style = document.createElement("style");
-		style.id = STYLE_ID;
-		style.textContent = CSS;
+		style.id = "bit-optimized-ui";
+		style.textContent = themeStyles;
 		document.head.append(style);
 		const media = document.defaultView.matchMedia("(prefers-color-scheme: dark)");
 		const storage = document.defaultView.sessionStorage;
 		let mode = storage.getItem("bit-autologin-theme");
-		const themeButton = document.createElement("button");
-		themeButton.type = "button";
-		themeButton.className = "bit-theme-button";
+		const themeButton = createElement("button", "bit-theme-button");
 		themeButton.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M12 3l0 18"/><path d="M12 9l4.65 -4.65"/><path d="M12 14.3l7.37 -7.37"/><path d="M12 19.6l8.85 -8.85"/>
   </svg>`;
@@ -409,34 +306,52 @@
 		document.addEventListener("pl_event", preventNativeResizeReload, true);
 		media.addEventListener("change", applyMode);
 		applyMode();
-		const noticeButton = document.createElement("button");
-		noticeButton.type = "button";
-		noticeButton.className = "bit-notice-button";
-		noticeButton.textContent = "公告";
-		noticeButton.ariaLabel = "公告";
+		const noticeButton = createElement("button", "bit-notice-button");
+		setPanelButton(noticeButton, "公告");
+		let noticeCloseTimer;
 		noticeButton.onclick = () => {
 			const card = noticeButton.closest(".login-content");
-			if (card.classList.toggle("bit-notice-open") !== !!card.querySelector(".login-content-left:not(.notice-hide)")) card.querySelector(".newNotice, .newHideNotice")?.click();
+			document.dispatchEvent(new document.defaultView.Event("bit-close-settings"));
+			clearTimeout(noticeCloseTimer);
+			const expanded = card.classList.toggle("bit-notice-open");
+			card.classList.toggle("bit-notice-closing", !expanded);
+			if (!expanded) noticeCloseTimer = setTimeout(() => card.classList.remove("bit-notice-closing"), 220);
+			if (expanded !== !!card.querySelector(".login-content-left:not(.notice-hide)")) card.querySelector(".newNotice, .newHideNotice")?.click();
 			sync();
 		};
+		const settingsButton = createElement("button", "bit-settings-button");
+		setPanelButton(settingsButton, "设置");
+		settingsButton.onclick = () => document.dispatchEvent(new document.defaultView.Event("bit-toggle-settings"));
+		const settingsPreview = createElement("div", "bit-settings-preview");
+		settingsPreview.setAttribute("aria-hidden", "true");
 		function toggleRemember(event) {
 			const wrapper = event.target.closest(".topFunctionColor");
 			if (wrapper && !event.target.closest("button")) wrapper.querySelector("button")?.click();
 		}
 		document.addEventListener("click", toggleRemember);
-		const brand = document.createElement("div");
-		brand.className = "bit-login-brand";
-		brand.innerHTML = "<div class=\"bit-brand-emblem\"></div><span class=\"bit-brand-name\">数智北理</span><span class=\"bit-brand-subtitle\">| 统一身份认证</span>";
+		const brand = createElement("div", "bit-login-brand", "<div class=\"bit-brand-emblem\"></div><span class=\"bit-brand-name\">数智北理</span><span class=\"bit-brand-subtitle\">| 统一身份认证</span>");
 		const emblem = brand.firstElementChild;
-		const header = document.createElement("div");
-		header.className = "bit-login-header";
-		header.innerHTML = "<h1>统一身份认证</h1><div id=\"bit-login-actions\"></div><div class=\"bit-login-separator\" role=\"separator\">Or</div>";
-		const footer = document.createElement("div");
-		footer.className = "bit-login-footer";
+		const header = createElement("div", "bit-login-header", "<h1>统一身份认证</h1><div id=\"bit-login-actions\"></div><div class=\"bit-login-separator\" role=\"separator\">Or</div>");
+		const footer = createElement("div", "bit-login-footer");
+		const bottomLinks = createElement("div", "bit-bottom-links");
+		const actionRow = createElement("div", "bit-login-options");
+		actionRow.append(footer);
+		const cardActions = [
+			bottomLinks,
+			settingsButton,
+			settingsPreview,
+			noticeButton,
+			themeButton
+		];
 		const tabLabels = {
+			用户名密码: "密码登录",
+			用户密码: "密码登录",
+			短信验证码: "短信验证",
+			手机验证码: "短信验证",
 			通行密钥认证: "通行密钥",
-			用户名密码: "用户密码",
-			短信验证码: "手机验证码"
+			邮件验证码: "邮件验证",
+			邮箱验证码: "邮件验证",
+			i北理扫码: "扫码登录"
 		};
 		const renamedTabs = /* @__PURE__ */ new Map();
 		const moved = /* @__PURE__ */ new Map();
@@ -453,15 +368,13 @@
 				renamedTabs.set(label, label.textContent);
 				label.textContent = replacement;
 			}
-			if (footer.parentNode !== card) card.append(footer);
-			if (noticeButton.parentNode !== card) card.append(noticeButton);
-			if (themeButton.parentNode !== card) card.append(themeButton);
+			for (const element of cardActions) if (element.parentNode !== card) card.append(element);
 			for (const element of card.querySelectorAll(".last-action, .passkey-use, .login-panel-box")) {
 				if (moved.has(element)) continue;
 				const marker = document.createComment("login-footer");
 				element.before(marker);
 				moved.set(element, marker);
-				footer.append(element);
+				(element.matches(".login-panel-box") ? bottomLinks : footer).append(element);
 			}
 			for (const [element, marker] of moved) {
 				if (!marker.isConnected) {
@@ -473,11 +386,7 @@
 			}
 			noticeButton.hidden = !document.querySelector(".newNotice, .newHideNotice");
 			const expanded = card.classList.contains("bit-notice-open");
-			const value = String(expanded);
-			if (noticeButton.getAttribute("aria-expanded") !== value) {
-				noticeButton.setAttribute("aria-expanded", value);
-				noticeButton.textContent = expanded ? "收起" : "公告";
-			}
+			setPanelButton(noticeButton, "公告", expanded);
 			const title = card.querySelector("#login-content-right-inner");
 			if (title && header.parentNode !== title) title.prepend(header);
 			if (brand.parentNode !== card.parentNode) card.before(brand);
@@ -489,7 +398,14 @@
 				}
 			}
 			const holder = card.querySelector(".ant-tabs-content-holder");
-			if (remember && holder && remember.parentNode !== holder) holder.append(remember);
+			const activeForm = holder?.querySelector(".ant-tabs-tabpane-active :is(#normalLoginForm, #smsLoginForm, #mailLoginForm, #webauthnLoginForm)");
+			const submitRow = activeForm?.querySelector(".login-normal-button");
+			const rememberParent = submitRow?.parentNode === activeForm ? activeForm : holder;
+			if (rememberParent && actionRow.parentNode !== rememberParent) {
+				if (rememberParent === activeForm) submitRow.before(actionRow);
+				else rememberParent.append(actionRow);
+			}
+			if (remember && remember.parentNode !== actionRow) actionRow.prepend(remember);
 			if (!logo) {
 				logo = document.querySelector(".login-title-img");
 				if (logo) {
@@ -509,6 +425,7 @@
 		sync();
 		cleanup = () => {
 			observer.disconnect();
+			clearTimeout(noticeCloseTimer);
 			document.removeEventListener("pl_event", preventNativeResizeReload, true);
 			for (const [label, original] of renamedTabs) label.textContent = original;
 			document.removeEventListener("click", toggleRemember);
@@ -519,13 +436,14 @@
 				element.hidden = false;
 				marker.replaceWith(element);
 			}
-			footer.remove();
-			brand.remove();
-			header.remove();
-			themeButton.remove();
-			noticeButton.closest(".login-content")?.classList.remove("bit-notice-open");
-			noticeButton.remove();
-			style.remove();
+			noticeButton.closest(".login-content")?.classList.remove("bit-notice-open", "bit-notice-closing");
+			for (const element of [
+				...cardActions,
+				actionRow,
+				brand,
+				header,
+				style
+			]) element.remove();
 			delete document.documentElement.dataset.bitTheme;
 		};
 	}
@@ -547,117 +465,12 @@
 	var SPINNER = `<svg class="sso-spinner" viewBox="0 0 1024 1024" aria-hidden="true">
   <path d="M512 36a476 476 0 0 1 476 476" fill="none" stroke="currentColor" stroke-width="72" stroke-linecap="round"/>
 </svg>`;
-	var STYLES = `
-  :host-context(.bit-optimized-ui) #sso-tip { margin-bottom: 0; }
-  :host-context(.bit-optimized-ui) .sso-info:not(.error):not(.success),
-  :host-context(.bit-optimized-ui) .sso-settings { background: var(--card); border-color: var(--input);
-    color: var(--foreground); border-radius: 8px; }
-  :host-context(.bit-optimized-ui) :is(.sso-info, .sso-settings) { height: 36px; flex: 1; box-sizing: border-box; border-radius: calc(var(--radius) - 2px); }
-  :host-context(.bit-optimized-ui) .sso-info:hover, :host-context(.bit-optimized-ui) .sso-settings:hover { background: var(--muted); }
-  :host-context(.bit-optimized-ui) .sso-dialog { background: var(--card); border: 1px solid var(--border); }
-  :host-context(.bit-optimized-ui) .sso-title { color: var(--foreground); }
-  :host-context(.bit-optimized-ui) :is(.sso-label, .sso-checkbox-text) { color: var(--muted-foreground); }
-  :host-context(.bit-optimized-ui) .sso-checkbox-text { font: var(--switch-label-font); }
-  :host-context(.bit-optimized-ui) .sso-input { background: var(--field-background); border-color: var(--border); color: var(--foreground); }
-  :host-context(.bit-optimized-ui) .sso-btn-primary { background: var(--primary); color: var(--primary-foreground); border-radius: calc(var(--radius) - 2px); font-weight: 500; }
-  :host-context(.bit-optimized-ui) .sso-btn-primary:hover { background: color-mix(in oklch, var(--primary) 90%, transparent); }
-  :host-context(.bit-optimized-ui) .sso-btn-clear { background: transparent; color: #f87171; }
-  :host-context(.bit-optimized-ui) .sso-settings { flex: 0 0 36px; padding: 0; }
-  .sso-settings svg { display: none; }
-  :host-context(.bit-optimized-ui) .sso-settings svg:not(.close-icon) { display: block; }
-  :host-context(.bit-optimized-ui) .sso-settings span { display: none; }
-  @keyframes sso-reveal { from { clip-path: circle(0 at 100% 0); } to { clip-path: circle(150% at 100% 0); } }
-  :host(.inline-settings) .sso-overlay { position: absolute; background: var(--card); animation: sso-reveal 180ms ease-out; }
-  @keyframes sso-conceal { from { clip-path: circle(150% at 100% 0); } to { clip-path: circle(0 at 100% 0); } }
-  :host(.inline-settings) .sso-overlay.closing { animation: sso-conceal 200ms ease-in forwards; }
-  :host(.inline-settings) .sso-overlay.closing .sso-dialog { animation: none; }
-  :host(.inline-settings) .sso-dialog { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; max-width: none; box-sizing: border-box; padding: 8px 24px 24px; border: 0; border-radius: 0; box-shadow: none; animation: none; }
-  :host(.inline-settings) .sso-title { text-align: center; font-size: 16px; line-height: 20px; margin: 0; }
-  :host(.inline-settings) .sso-field { position: absolute; left: 24px; right: 24px; top: var(--input-top); margin: 0; }
-  :host(.inline-settings) .sso-field + .sso-field { top: calc(var(--input-top) + 52px); }
-  :host(.inline-settings) .sso-label { position: absolute; clip-path: inset(100%); }
-  .sso-field ion-icon { display: none; }
-  :host(.inline-settings) .sso-field ion-icon { display: block; position: absolute; left: 13px; top: 11px; width: 14px; height: 14px; color: var(--foreground); pointer-events: none; }
-  :host(.inline-settings) .sso-input { font: var(--login-input-font); height: 36px; padding: 3px 12px 3px 34px; border-radius: calc(var(--radius) - 2px); background: var(--field-background); border-color: var(--input); box-shadow: 0 1px 2px #0001; }
-  :host-context(.bit-optimized-ui) .sso-input:is(:autofill, :-webkit-autofill) { -webkit-text-fill-color: var(--foreground) !important; caret-color: var(--foreground); }
-  :host(.inline-settings) .sso-input::placeholder { color: var(--muted-foreground); opacity: 1; }
-  :host(.inline-settings) .sso-input:focus { outline: none; border-color: var(--muted-foreground); box-shadow: 0 0 0 3px color-mix(in oklch, var(--muted-foreground) 50%, transparent); }
-  :host(.inline-settings) .sso-checkbox-label { position: absolute; left: 24px; top: calc(var(--input-top) + 104px); margin: 0; height: 20px; }
-  :host(.inline-settings) .sso-checkbox-label:has([name="optimizedUI"]) { left: auto; right: 24px; }
-  :host(.inline-settings) .sso-actions { position: absolute; top: var(--submit-top); left: 24px; right: 24px; display: grid; grid-template-columns: 1fr; }
-  :host(.inline-settings) .sso-btn { height: 36px; }
-  :host(.inline-settings) .sso-footnote { position: absolute; bottom: 8px; left: 20px; right: 20px; height: 32px; margin: 0; }
-  :host(.inline-settings) a { color: var(--muted-foreground); text-decoration: none; text-underline-offset: 4px; }
-  :host(.inline-settings) a:hover { color: var(--foreground); text-decoration: underline; }
-  :host-context(.bit-optimized-ui) #sso-tip .sso-settings { position: absolute; top: 20px; right: 20px; z-index: 50; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--foreground); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 150ms, opacity 180ms; }
-  .sso-settings .close-icon { display: none; }
-  :host-context(.bit-settings-open) .sso-settings svg:not(.close-icon) { display: none; }
-  :host-context(.bit-settings-open) .sso-settings .close-icon { display: block; }
-  :host-context(.bit-optimized-ui) #sso-tip .sso-settings:hover { background: var(--muted); }
-  :host .sso-footnote .sso-btn-clear { height: auto; padding: 0; border: 0; background: transparent; color: #ef4444; font-size: 12px; }
-  .sso-footnote .sso-btn-clear:hover { text-decoration: underline; text-underline-offset: 4px; }
-  .sso-checkbox { appearance: none; position: relative; flex: 0 0 32px; width: 32px !important; height: 18px !important; border: 1px solid transparent; border-radius: 999px; background: var(--input, #ddd); transition: background 150ms; cursor: pointer; }
-  .sso-checkbox::before { content: ''; position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 150ms; }
-  .sso-checkbox:checked { background: var(--primary, #171717); }
-  .sso-checkbox:checked::before { transform: translateX(14px); background: var(--primary-foreground, #fff); }
-  .sso-checkbox:focus-visible { outline: 2px solid var(--muted-foreground, #999); outline-offset: 2px; }
-  @media (prefers-reduced-motion: reduce) { :host(.inline-settings) .sso-overlay { animation-duration: 1ms; } }
-  @keyframes sso-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  @keyframes sso-fade-in { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes sso-fade-out { from { opacity: 1; } to { opacity: 0; } }
-  @keyframes sso-scale-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-  @keyframes sso-scale-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.9); } }
-
-  #sso-tip { display: flex; width: 100%; gap: 10px; margin-bottom: 32px;
-    font: 14px sans-serif; user-select: none; }
-  .sso-info, .sso-settings { height: 2.3em; padding: 0 15px; border-radius: 4px;
-    background: #fff; border: 1px solid #fff; display: flex; align-items: center;
-    justify-content: center; color: #000; transition: background 0.2s ease; }
-  .sso-info { flex: 1; gap: 8px; }
-  .sso-info.clickable, .sso-settings { cursor: pointer; }
-  .sso-info.clickable:hover, .sso-settings:hover { background: rgba(255,255,255,0.9); }
-  .sso-info.success { --status-color: rgba(76,175,80,0.9); }
-  .sso-info.error { --status-color: rgba(255,77,79,0.9); }
-  .sso-info.success, .sso-info.error { background: var(--status-color); border-color: var(--status-color); color: #fff; }
-  .sso-info.disabled { opacity: 0.5; cursor: not-allowed; }
-  .sso-spinner { width: 14px; height: 14px; animation: sso-spin 1s linear infinite; }
-  .sso-info:not(.loading) :is(.sso-spinner, .sso-cancel) { display: none; }
-  .sso-cancel { margin-left: auto; opacity: 0.7; font-size: 12px; }
-
-  .sso-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 999999;
-    display: flex; align-items: center; justify-content: center; animation: sso-fade-in 0.2s ease; }
-  .sso-overlay.closing { animation: sso-fade-out 0.15s ease forwards; }
-  .sso-dialog { background: #fff; padding: 32px 32px 18px; border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3); width: 400px; max-width: 90vw; user-select: none;
-    animation: sso-scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  .sso-overlay.closing .sso-dialog { animation: sso-scale-out 0.15s ease forwards; }
-  .sso-dialog:focus { outline: none; }
-  .sso-title { margin: 0 0 20px; color: #333; font-size: 20px; }
-  .sso-field { margin-bottom: 15px; }
-  .sso-label { display: block; margin-bottom: 5px; color: #666; font-size: 14px; }
-  .sso-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
-    box-sizing: border-box; font-size: 14px; }
-  .sso-hint, .sso-footnote { color: #999; font-size: 12px; }
-  .sso-checkbox-label { display: flex; gap: 8px; align-items: center; cursor: pointer; margin-bottom: 20px; }
-  .sso-checkbox { margin: 0; }
-  .sso-checkbox-text { color: #666; font-size: 14px; }
-  .sso-actions { display: flex; gap: 10px; justify-content: space-between; }
-  .sso-btn { padding: 6px 18px; border-radius: 6px; cursor: pointer; font-size: 14px;
-    transition: background 0.2s ease; }
-  .sso-btn-clear { border: 1px solid #ff000033; background: #fff; color: #ff0000; }
-  .sso-btn-clear:hover { background: #ff00000a; }
-  .sso-btn-clear:active { background: #ff000018; }
-  .sso-btn-primary { border: none; background: #2196F3; color: #fff; }
-  .sso-btn-primary:hover { background: #1976D2; }
-  .sso-btn-primary:active { background: #1565C0; }
-  .sso-footnote { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; line-height: 1.4; }
-`;
 	function createUI(onLogin, onCancel) {
 		const host = document.createElement("div");
 		host.id = "bit-sso-helper";
 		const root = host.attachShadow({ mode: "closed" });
 		const style = document.createElement("style");
-		style.textContent = STYLES;
+		style.textContent = helperStyles;
 		root.append(style);
 		const bar = document.createElement("div");
 		bar.id = "sso-tip";
@@ -665,14 +478,17 @@
     <div class="sso-info" aria-live="polite">
       ${SPINNER}<span class="sso-message"></span><span class="sso-cancel">点击取消</span>
     </div>
-    <button type="button" class="sso-settings" aria-label="设置" title="设置"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg><svg class="close-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg><span>设置</span></button>`;
+    <button type="button" class="sso-settings" aria-label="设置" title="设置">设置</button>`;
 		root.append(bar);
 		const info = bar.querySelector(".sso-info");
 		const messageText = bar.querySelector(".sso-message");
 		let observer;
+		let cleanupCaptcha;
 		let tipTimer;
+		let resetTimer;
 		let dialogHost;
 		let closingLayer;
+		let finishClosing;
 		let restoreFocus;
 		let lastStatus = {
 			state: "",
@@ -693,13 +509,19 @@
 			if (timeout) tipTimer = setTimeout(() => show(), timeout);
 		}
 		function placeBar() {
+			host.toggleAttribute("data-modern", document.documentElement.classList.contains("bit-optimized-ui"));
 			const panel = document.querySelector("#bit-login-actions") || document.querySelector(".moreloginbtnBox") || document.querySelector("#normalLoginForm, #login-content-right-inner");
 			if (panel && !panel.contains(host)) {
 				host.style.cssText = "display:block;width:100%";
 				panel.prepend(host);
 			} else if (!panel && host.isConnected) host.remove();
 		}
+		const toggleSettings = () => dialogHost ? closeSettings() : openSettings();
+		const dismissSettings = () => closeSettings(false);
 		function mount() {
+			cleanupCaptcha = mountCaptchaDialog(document);
+			document.addEventListener("bit-toggle-settings", toggleSettings);
+			document.addEventListener("bit-close-settings", dismissSettings);
 			setOptimizedUI(store.get().optimizedUI);
 			show();
 			placeBar();
@@ -708,21 +530,36 @@
 				childList: true,
 				subtree: true
 			});
+			observer.observe(document.documentElement, {
+				attributes: true,
+				attributeFilter: ["class"]
+			});
 		}
 		function closeSettings(animate = true) {
+			clearTimeout(resetTimer);
+			finishClosing?.();
 			if (!dialogHost) return;
 			const closing = dialogHost;
-			bar.querySelector(".sso-settings").ariaLabel = "设置";
+			setPanelButton(document.querySelector(".bit-settings-button"), "设置");
+			let closeTimer;
+			const layer = closingLayer;
+			const onAnimationEnd = (event) => {
+				if (event.target === layer) remove();
+			};
 			const remove = () => {
-				closing.parentElement?.classList.remove("bit-settings-open");
+				clearTimeout(closeTimer);
+				layer.removeEventListener("animationend", onAnimationEnd);
+				if (finishClosing === remove) finishClosing = void 0;
+				if (!dialogHost || dialogHost === closing) closing.parentElement?.classList.remove("bit-settings-open");
 				closing.remove();
 			};
+			closing.inert = true;
 			if (animate) {
-				const layer = closingLayer;
+				layer.style.removeProperty("animation");
 				layer.classList.add("closing");
-				layer.addEventListener("animationend", (event) => {
-					if (event.target === layer) remove();
-				});
+				finishClosing = remove;
+				closeTimer = setTimeout(remove, 250);
+				layer.addEventListener("animationend", onAnimationEnd);
 			} else remove();
 			dialogHost = null;
 			restoreFocus?.focus();
@@ -730,7 +567,6 @@
 		function openSettings() {
 			closeSettings(false);
 			document.querySelector(".bit-notice-button[aria-expanded=\"true\"]")?.click();
-			restoreFocus = root.activeElement || document.activeElement;
 			dialogHost = document.createElement("div");
 			dialogHost.id = "gm-sso-config";
 			const dialogRoot = dialogHost.attachShadow({ mode: "closed" });
@@ -740,7 +576,11 @@
 			closingLayer = overlay;
 			overlay.innerHTML = `
       <form class="sso-dialog" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="sso-title">
-        <h2 class="sso-title" id="sso-title">BIT Autologin 设置</h2>
+        <div class="sso-heading">
+          <h2 class="sso-title" id="sso-title">AutoLogin 设置</h2>
+          <label class="sso-checkbox-label sso-modern-toggle"><span class="sso-checkbox-text">现代化UI</span>
+            <input type="checkbox" role="switch" name="optimizedUI" class="sso-checkbox"></label>
+        </div>
         <div class="sso-field"><label class="sso-label" for="gm-sso-username">用户名 (学号)</label>
           <ion-icon name="name-icon" aria-hidden="true"></ion-icon><input type="text" id="gm-sso-username" name="username" class="sso-input" placeholder="请输入学号" autocomplete="username"></div>
         <div class="sso-field"><label class="sso-label" for="gm-sso-password">密码</label>
@@ -748,24 +588,29 @@
           </div>
         <label class="sso-checkbox-label"><span class="sso-checkbox-text">自动登录</span>
           <input type="checkbox" role="switch" id="gm-sso-auto" name="auto" class="sso-checkbox"></label>
-        <label class="sso-checkbox-label"><span class="sso-checkbox-text">现代化UI</span>
-          <input type="checkbox" role="switch" name="optimizedUI" class="sso-checkbox"></label>
         <div class="sso-actions"><button type="submit" class="sso-btn sso-btn-primary">保存</button></div>
-        <div class="sso-footnote"><button type="button" id="gm-sso-clear" class="sso-btn sso-btn-clear">清除</button>
-          <a href="https://github.com/windlandneko/bit-autologin" target="_blank" rel="noopener noreferrer">Github</a></div>
+        <div class="sso-footnote"><button type="button" id="gm-sso-reset" class="sso-btn sso-btn-reset">重置</button>
+          <span class="sso-credit">Made by <a href="https://github.com/windlandneko" target="_blank" rel="noopener noreferrer">windlandneko</a> with ❤️</span></div>
       </form>`;
 			dialogRoot.append(overlay);
-			const content = document.querySelector(".login-content .ant-tabs-content-holder");
-			const card = document.documentElement.classList.contains("bit-optimized-ui") && content?.closest(".login-content");
-			if (card) {
-				dialogHost.className = "inline-settings";
-				const panelTop = card.querySelector(".bit-login-header").getBoundingClientRect().bottom - card.getBoundingClientRect().top + 24;
-				const inputTop = content.getBoundingClientRect().top - card.getBoundingClientRect().top - panelTop;
-				dialogHost.style.cssText = `position:absolute;inset:${panelTop}px 0 0;z-index:40;--input-top:${inputTop}px;--submit-top:${inputTop + 140}px`;
-				bar.querySelector(".sso-settings").ariaLabel = "返回登录";
-				card.classList.add("bit-settings-open");
-				card.append(dialogHost);
-			} else document.body.append(dialogHost);
+			function placeDialog() {
+				dialogHost.parentElement?.classList.remove("bit-settings-open");
+				const content = document.querySelector(".login-content .ant-tabs-content-holder");
+				const card = document.documentElement.classList.contains("bit-optimized-ui") && content?.closest(".login-content");
+				dialogHost.classList.toggle("inline-settings", !!card);
+				dialogHost.toggleAttribute("data-modern", !!card);
+				if (card) {
+					const settingsButton = card.querySelector(".bit-settings-button");
+					setPanelButton(settingsButton, "设置", true);
+					card.classList.add("bit-settings-open");
+					card.append(dialogHost);
+					restoreFocus = settingsButton;
+				} else {
+					document.body.append(dialogHost);
+					restoreFocus = bar.querySelector(".sso-settings");
+				}
+			}
+			placeDialog();
 			const form = overlay.querySelector("form");
 			const { username, password, auto, optimizedUI } = form.elements;
 			const config = store.get();
@@ -773,26 +618,41 @@
 			password.value = config.password;
 			auto.checked = config.auto;
 			optimizedUI.checked = !!config.optimizedUI;
+			optimizedUI.onchange = () => {
+				overlay.style.animation = "none";
+				form.style.animation = "none";
+				store.set({
+					...store.get(),
+					optimizedUI: optimizedUI.checked
+				});
+				placeBar();
+				placeDialog();
+				optimizedUI.focus({ preventScroll: true });
+			};
 			overlay.onclick = (event) => {
 				if (event.target === overlay) closeSettings();
 			};
-			const clear = form.querySelector("#gm-sso-clear");
-			let confirmingClear = false;
-			clear.onclick = () => {
-				if (!confirmingClear) {
-					confirmingClear = true;
-					clear.textContent = "确认清除？";
+			const reset = form.querySelector("#gm-sso-reset");
+			let confirmingReset = false;
+			reset.onclick = () => {
+				if (!confirmingReset) {
+					confirmingReset = true;
+					reset.textContent = "确认？";
+					resetTimer = setTimeout(() => {
+						confirmingReset = false;
+						reset.textContent = "重置";
+					}, 3e3);
 					return;
 				}
 				onCancel();
 				closeSettings(false);
 				store.set({
+					...store.get(),
 					username: "",
 					password: "",
-					auto: false,
-					optimizedUI: false
+					auto: false
 				});
-				show("error", "登录信息已清除", 1e3);
+				show("error", "登录信息已重置", 1e3);
 			};
 			form.onsubmit = (event) => {
 				event.preventDefault();
@@ -816,18 +676,15 @@
 				const elements = [...overlay.querySelectorAll("button, input, a[href]")];
 				const first = elements[0];
 				const last = elements.at(-1);
-				if (event.shiftKey && dialogRoot.activeElement === first) {
+				if (dialogRoot.activeElement === (event.shiftKey ? first : last) || event.shiftKey && dialogRoot.activeElement === form) {
 					event.preventDefault();
-					last.focus();
-				} else if (!event.shiftKey && dialogRoot.activeElement === last) {
-					event.preventDefault();
-					first.focus();
+					(event.shiftKey ? last : first).focus();
 				}
 			};
 			form.focus({ preventScroll: true });
 			return dialogRoot;
 		}
-		bar.querySelector(".sso-settings").onclick = () => dialogHost ? closeSettings() : openSettings();
+		bar.querySelector(".sso-settings").onclick = toggleSettings;
 		return {
 			root,
 			mount,
@@ -837,6 +694,9 @@
 				return lastStatus;
 			},
 			destroy() {
+				cleanupCaptcha?.();
+				document.removeEventListener("bit-toggle-settings", toggleSettings);
+				document.removeEventListener("bit-close-settings", dismissSettings);
 				setOptimizedUI(false);
 				observer?.disconnect();
 				clearTimeout(tipTimer);
@@ -876,7 +736,7 @@
 				signal.throwIfAborted();
 				const current = readPageState(document);
 				if (current.execution !== state.execution || pageBlockReason(current)) throw new Error("认证页面已变化，请检查当前验证步骤后重试");
-				ui.show("disabled", "正在跳转…");
+				ui.show("disabled", "正在提交登录信息…");
 				submitPayload(document, route, payload);
 				submitted = true;
 			} catch (error) {
@@ -887,27 +747,34 @@
 			}
 		}
 		const ui = createUI(login, cancel);
-		GM_registerMenuCommand("⚙️ BIT AutoLogin 设置", ui.openSettings);
+		GM_registerMenuCommand("⚙️ 设置", ui.openSettings);
 		if (route) {
 			ui.mount();
 			const reason = pageBlockReason(readPageState(document));
 			if (reason) ui.show("error", reason);
 			else if (store.get().auto) login();
 		}
+		function onPageHide(event) {
+			if (!event.persisted) return destroy();
+			controller?.abort();
+			controller = null;
+			submitted = false;
+			ui.show();
+		}
+		function destroy() {
+			document.defaultView.removeEventListener("pagehide", onPageHide);
+			controller?.abort();
+			controller = null;
+			ui.destroy();
+		}
+		document.defaultView.addEventListener("pagehide", onPageHide);
 		return {
 			ui,
 			login,
 			cancel,
-			destroy() {
-				controller?.abort();
-				controller = null;
-				ui.destroy();
-			}
+			destroy
 		};
 	}
-	if (typeof window !== "undefined") {
-		const app = startApp(unsafeWindow);
-		window.addEventListener("pagehide", () => app.destroy(), { once: true });
-	}
+	if (typeof window !== "undefined") startApp(unsafeWindow);
 	//#endregion
 })();

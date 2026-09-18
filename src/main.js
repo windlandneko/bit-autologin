@@ -47,7 +47,7 @@ export function startApp(pageWindow) {
       const current = readPageState(document)
       if (current.execution !== state.execution || pageBlockReason(current))
         throw new Error('认证页面已变化，请检查当前验证步骤后重试')
-      ui.show('disabled', '正在跳转…')
+      ui.show('disabled', '正在提交登录信息…')
       submitPayload(document, route, payload)
       submitted = true
     } catch (error) {
@@ -63,26 +63,29 @@ export function startApp(pageWindow) {
   }
 
   const ui = createUI(login, cancel)
-  GM_registerMenuCommand('⚙️ BIT AutoLogin 设置', ui.openSettings)
+  GM_registerMenuCommand('⚙️ 设置', ui.openSettings)
   if (route) {
     ui.mount()
     const reason = pageBlockReason(readPageState(document))
     if (reason) ui.show('error', reason)
     else if (store.get().auto) void login()
   }
-  return {
-    ui,
-    login,
-    cancel,
-    destroy() {
-      controller?.abort()
-      controller = null
-      ui.destroy()
-    },
+  // Cached pages keep their UI, but must not resume an old authentication request.
+  function onPageHide(event) {
+    if (!event.persisted) return destroy()
+    controller?.abort()
+    controller = null
+    submitted = false
+    ui.show()
   }
+  function destroy() {
+    document.defaultView.removeEventListener('pagehide', onPageHide)
+    controller?.abort()
+    controller = null
+    ui.destroy()
+  }
+  document.defaultView.addEventListener('pagehide', onPageHide)
+  return { ui, login, cancel, destroy }
 }
 
-if (typeof window !== 'undefined') {
-  const app = startApp(unsafeWindow)
-  window.addEventListener('pagehide', () => app.destroy(), { once: true })
-}
+if (typeof window !== 'undefined') startApp(unsafeWindow)
